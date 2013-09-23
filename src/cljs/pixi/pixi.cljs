@@ -23,8 +23,7 @@
   (set! (.-anchor.x sprite) x)
   (set! (.-anchor.y sprite) y))
 
-;; This is flawed as it takes a potentially unchanging input but expects
-;; the side effects to be re-evaluated every time.
+; Deprecated
 (defn create-simple [texture]
   (def sprite (js/PIXI.Sprite. texture))
   (set-position sprite 200 100)
@@ -57,8 +56,30 @@
 (def my-bunny (make-entity stage bunny-texture))
 (def bunny (make-entity stage bunny-texture))
 
+;; Create a main record to define the world
+; TODO: Stage should be provided and this whole thing should be built with a function
+(def world (atom {:next-id 0 :entities {} :stage stage}))
+;; World should have a list of all entities in the world
+;; World should be attached to a stage?
+;; Each entity should have some unique id
+;; Create a function to find an entity based on id in a world
+(defn get-entity [world entity-id]
+  (get (:entities world) entity-id))
+;; Create a function to add an entity to the world
+(defn add-entity [world entity]
+  (let [entity-id (:next-id world)
+        entities (assoc (:entities world) entity-id entity)]
+      (assoc world
+        :next-id (inc entity-id)
+        :entities entities)))
+;; Create a function to remove an entity from the world
+
+(swap! world (fn [] (add-entity @world bunny)))
+(swap! world (fn [] (add-entity @world my-bunny)))
+
 ;; function to remove all elements from the stage
 (defn empty-stage [stage]
+  "Remove all Pixi DisplayObjects from the given stage."
   (doall (map
    (fn [target]
     ;; (.log js/console target)
@@ -75,42 +96,55 @@
 ;(def bunny (create-simple bunny-texture))
 
 ;; Hacky attempt at key handling
-(def downkeys #{})
+(def downkeys (atom #{}))
 
 (event/listen
 	(.-body js/document)
 	"keydown"
   (fn [event]
-    (def downkeys (conj downkeys (.-keyCode event)))))
+    (do
+; Beginning work on dispatching an initial event when the key is first pressed
+;      (if (not (contains? @downkeys (.-keyCode event)))
+;        (.log js/console (str "Keydown " (.-keyCode event))))
+      (swap! downkeys conj (.-keyCode event)))))
 
 (event/listen
 	(.-body js/document)
 	"keyup"
   (fn [event]
-    (def downkeys (disj downkeys (.-keyCode event)))))
+    (swap! downkeys disj (.-keyCode event))))
 
-(defn check-input []
-  (when (contains? downkeys 38)
-    (move my-bunny 0 -1))
-  (when (contains? downkeys 37)
-    (move my-bunny -1 0))
-  (when (contains? downkeys 39)
-    (move my-bunny 1 0))
-  (when (contains? downkeys 40)
-    (move my-bunny 0 1)))
+; Hack to control which entity we are moving
+(def target-entity 0)
+
+; TODO: The function to execute in response to the key being pressed should
+; not be hard coded.
+(defn check-input [keystate]
+  "Intended to be the main loop to check for user input."
+  (when (contains? keystate 38)
+    (move (get-entity @world target-entity) 0 -1))
+  (when (contains? keystate 37)
+    (move (get-entity @world target-entity) -1 0))
+  (when (contains? keystate 39)
+    (move (get-entity @world target-entity) 1 0))
+  (when (contains? keystate 40)
+    (move (get-entity @world target-entity) 0 1)))
 
 
 ;; update world function
 (defn update-world[]
+  "Main game update function. Everything but rendering would fall in here."
   (do
-    (check-input)
-    (rotate bunny 0.2)
+    (check-input @downkeys)
+    (if (get-entity @world 0)
+      (rotate (get-entity @world 0) 0.2))
 ;  (move my-bunny 1 0)
 ;  (set! (.-position.x bunny) (+ 1 (.-position.x bunny)))
   ))
 
 ;; setup animation loop
 (defn animate[]
+  "Core callback loop."
   (js/requestAnimFrame animate)
   (update-world)
   (. renderer render stage))
