@@ -1,5 +1,6 @@
 (ns pixi-cljs.core
-  (:require [clojure.browser.event :as event]))
+  (:require [clojure.browser.event :as event]
+            [clinp.core :as clinp]))
 
 ;; setup renderer
 (def renderer (js/PIXI.autoDetectRenderer 400 300))
@@ -130,6 +131,7 @@
   (when (contains? keystate 40)
     (move (get-entity @world target-entity) 0 1)))
 
+; (move (get-entity @world target-entity) 0 -1)
 
 ;; update world function
 (defn update-world[]
