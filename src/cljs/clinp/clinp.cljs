@@ -31,7 +31,7 @@
   "Find the keyCode integer value for a keyword"
   (aget js/goog.events.KeyCodes (name key-name)))
 
-(defn- exec [key-code phase]
+(defn- exec-handler [phase key-code]
   "Execute the function (if found) for the given bind key and phase"
   (let [handler (get (get @listeners key-code) phase)]
     (if (not (nil? handler))
@@ -49,7 +49,7 @@
       (fn [event]
         (do
           (if (not (contains? @downkeys (.-keyCode event)))
-            (exec (.-keyCode event) :down))
+            (exec-handler :down (.-keyCode event)))
           (swap! downkeys conj (.-keyCode event)))))
     ; Setup keyup handler
     (event/listen
@@ -57,7 +57,7 @@
       "keyup"
       (fn [event]
           (if (contains? @downkeys (.-keyCode event))
-            (exec (.-keyCode event) :up))
+            (exec-handler :up (.-keyCode event)))
         (swap! downkeys disj (.-keyCode event))))))
 
 (defn teardown []
@@ -91,12 +91,13 @@
   "Remove a callback for a given key and phase.")
 
 (defn pulse []
-  "Trigger the pulse phase.")
+  "Trigger the pulse phase."
+  (map (partial exec-handler :pulse) @downkeys))
 
-;(setup)
+(setup)
 ;
-;(listen :UP :down (fn [] (.log js/console "Up Pressed")))
-;(listen :UP :up (fn [] (.log js/console "Up Released")))
+(listen :UP :down (fn [] (.log js/console "Up Pressed")))
+(listen :UP :up (fn [] (.log js/console "Up Released")))
 ;
 ;(listen :DOWN :down (fn [] (.log js/console "Down Pressed")))
 ;(listen :DOWN :up (fn [] (.log js/console "Down Released")))
