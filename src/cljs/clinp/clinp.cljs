@@ -27,7 +27,7 @@
 
 (def downkeys (atom #{}))
 
-(defn get-key-code [key-name]
+(defn- get-key-code [key-name]
   "Find the keyCode integer value for a keyword"
   (aget js/goog.events.KeyCodes (name key-name)))
 
@@ -70,9 +70,6 @@
   "Test if the given key is currently held down."
   (contains? @downkeys (get-key-code test-key)))
 
-; TODO The following event/listen should be inside the setup
-
-
 (defn listen [bind-key phase f]
   "Setup an callback for a given key and phase."
   ; TODO How to validate phase is in a known set?
@@ -92,12 +89,4 @@
 
 (defn pulse []
   "Trigger the pulse phase."
-  (map (partial exec-handler :pulse) @downkeys))
-
-(setup)
-;
-(listen :UP :down (fn [] (.log js/console "Up Pressed")))
-(listen :UP :up (fn [] (.log js/console "Up Released")))
-;
-;(listen :DOWN :down (fn [] (.log js/console "Down Pressed")))
-;(listen :DOWN :up (fn [] (.log js/console "Down Released")))
+  (dorun (map (partial exec-handler :pulse) @downkeys)))
