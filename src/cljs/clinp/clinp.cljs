@@ -2,6 +2,12 @@
   (:require [clojure.browser.event :as event]
             [goog.events.KeyCodes]))
 
+; Thoughts: Is this just going to end up in a handler soup?
+; Would this be better modeled by having the pulse generate events that go
+; to some queue and allow something else to consume from that queue? That
+; queue would have to be rebuilt every pulse? That might not be too bad if
+; you assume that from pulse to pulse the down keys don't change that much.
+
 ; TODO tests
 ; test get-key-code for known key
 ; test get-key-code for unknown key
@@ -84,6 +90,7 @@
        phase
        f))))
 
+; TODO Implement this function
 (defn unlisten [bind-key phase]
   "Remove a callback for a given key and phase.")
 
