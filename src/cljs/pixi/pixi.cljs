@@ -96,52 +96,41 @@
 ;(def my-bunny (create-simple bunny-texture))
 ;(def bunny (create-simple bunny-texture))
 
-;; Hacky attempt at key handling
-(def downkeys (atom #{}))
-
-(event/listen
-	(.-body js/document)
-	"keydown"
-  (fn [event]
-    (do
-; Beginning work on dispatching an initial event when the key is first pressed
-;      (if (not (contains? @downkeys (.-keyCode event)))
-;        (.log js/console (str "Keydown " (.-keyCode event))))
-      (swap! downkeys conj (.-keyCode event)))))
-
-(event/listen
-	(.-body js/document)
-	"keyup"
-  (fn [event]
-    (swap! downkeys disj (.-keyCode event))))
-
 ; Hack to control which entity we are moving
-(def target-entity 0)
+(def target-entity (atom 0))
 
-; TODO: The function to execute in response to the key being pressed should
-; not be hard coded.
-(defn check-input [keystate]
-  "Intended to be the main loop to check for user input."
-  (when (contains? keystate 38)
-    (move (get-entity @world target-entity) 0 -1))
-  (when (contains? keystate 37)
-    (move (get-entity @world target-entity) -1 0))
-  (when (contains? keystate 39)
-    (move (get-entity @world target-entity) 1 0))
-  (when (contains? keystate 40)
-    (move (get-entity @world target-entity) 0 1)))
+(clinp/setup)
 
-; (move (get-entity @world target-entity) 0 -1)
+(clinp/listen :Z :down
+              (fn [] (swap! target-entity
+                            (fn [cur]
+                              (if (>= (inc cur) (:next-id @world))
+                                0
+                                (inc cur))))))
+
+(clinp/listen :X :down
+              (fn [] (swap! world (fn [] (add-entity @world (make-entity stage bunny-texture))))))
+
+(clinp/listen :UP :pulse
+              (fn [] (move (get-entity @world @target-entity) 0 -1)))
+
+(clinp/listen :DOWN :pulse
+              (fn [] (move (get-entity @world @target-entity) 0 1)))
+
+(clinp/listen :LEFT :pulse
+              (fn [] (move (get-entity @world @target-entity) -1 0)))
+
+(clinp/listen :RIGHT :pulse
+              (fn [] (move (get-entity @world @target-entity) 1 0)))
+
 
 ;; update world function
 (defn update-world[]
   "Main game update function. Everything but rendering would fall in here."
   (do
-    (check-input @downkeys)
+    (clinp/pulse)
     (if (get-entity @world 0)
       (rotate (get-entity @world 0) 0.2))
-;  (move my-bunny 1 0)
-;  (set! (.-position.x bunny) (+ 1 (.-position.x bunny)))
   ))
 
 ;; setup animation loop
