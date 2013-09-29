@@ -28,6 +28,8 @@
                 :compiler {;; CLS generated JS script filename
                            :output-to "resources/public/js/cljs-pixi.js"
 
+                           ; See http://lukevanderhart.com/2011/09/30/using-javascript-and-clojurescript.html for why advanced optimization doesn't work.
+
                            ;; minimal JS optimization directive
                            :optimizations :whitespace
 
