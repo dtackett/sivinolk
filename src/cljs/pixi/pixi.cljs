@@ -99,28 +99,29 @@
 ; Hack to control which entity we are moving
 (def target-entity (atom 0))
 
-(clinp/setup)
+(clinp/setup!)
 
-(clinp/listen :Z :down
+(clinp/listen! :Z :down
               (fn [] (swap! target-entity
                             (fn [cur]
                               (if (>= (inc cur) (:next-id @world))
                                 0
                                 (inc cur))))))
 
-(clinp/listen :X :down
-              (fn [] (swap! world (fn [] (add-entity @world (make-entity stage bunny-texture))))))
+(clinp/listen! :X :down
+              (fn [] (swap! world
+                            (fn [] (add-entity @world (make-entity stage bunny-texture))))))
 
-(clinp/listen :UP :pulse
+(clinp/listen! :UP :pulse
               (fn [] (move (get-entity @world @target-entity) 0 -1)))
 
-(clinp/listen :DOWN :pulse
+(clinp/listen! :DOWN :pulse
               (fn [] (move (get-entity @world @target-entity) 0 1)))
 
-(clinp/listen :LEFT :pulse
+(clinp/listen! :LEFT :pulse
               (fn [] (move (get-entity @world @target-entity) -1 0)))
 
-(clinp/listen :RIGHT :pulse
+(clinp/listen! :RIGHT :pulse
               (fn [] (move (get-entity @world @target-entity) 1 0)))
 
 
@@ -128,9 +129,11 @@
 (defn update-world[]
   "Main game update function. Everything but rendering would fall in here."
   (do
-    (clinp/pulse)
+    (clinp/pulse!)
     (if (get-entity @world 0)
       (rotate (get-entity @world 0) 0.2))
+
+;    (rotate (get-entity @world 5) 0.01)
   ))
 
 ;; setup animation loop
