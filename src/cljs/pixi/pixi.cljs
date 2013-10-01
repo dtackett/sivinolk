@@ -1,6 +1,8 @@
 (ns pixi-cljs.core
   (:require [clojure.browser.event :as event]
-            [clinp.core :as clinp]))
+            [clinp.core :as clinp]
+            [pixi.components :as components])
+  (:require-macros [pixi.macro :refer [component]]))
 
 ;; setup renderer
 (def renderer (js/PIXI.autoDetectRenderer 400 300))
@@ -24,13 +26,86 @@
   (set! (.-anchor.x sprite) x)
   (set! (.-anchor.y sprite) y))
 
-; Deprecated
-(defn create-simple [texture]
-  (def sprite (js/PIXI.Sprite. texture))
-  (set-position sprite 200 100)
-  (set-anchor sprite 0.5 0.5)
-  (. stage addChild sprite)
-  sprite)
+
+; Components
+; (Some components are dependent on the existance of others)
+; position component [x, y]
+; collision component [aabb]
+; physics component [vx, vy, ax, ay]
+; render component [sprite]
+
+(component pixi-renderer [sprite])
+(component position [x y])
+(component rotation [r])
+(component velocity [x, y])
+
+; Soon to be deprecated?
+(defrecord Entity [sprite])
+
+(defn- add-component [e c]
+  "Add a component by its name to the given map"
+  (assoc e (components/component-name c) c))
+
+(defn compose-entity [components]
+  (reduce add-component {} components))
+
+;(defn get-component [entity component]
+;  (loop [components entity]
+;    (cond (empty? components) nil
+;          (instance? component (first components)) (first components)
+;          :else (recur (rest components)))))
+
+(def test-entity (compose-entity
+                    [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
+                     (rotation. 0)
+                     (position. 100 100)]))
+
+(:position test-entity)
+
+;(component-name (get-component test-entity position))
+
+;(defn compound [coll c]
+;  (assoc coll (component-name c) c))
+
+;(compound {} (get-component test-entity position))
+
+;(reduce compound {} test-entity)
+
+;(Entity. [(position 10 10)
+;          (velocity 1 0)
+;          (pixi-renderer bunny-texture)])
+; Ok smart guy. You've created an entity and added all these components.
+; How do you know what components an entity has?
+
+; (-> myEntity has-component? :component)
+; (-> myEntity get-component :component)
+; (-> myEntity update-component new-component-value)
+; (-> world update-entity 1 )
+(defn update-entity [world new-entity]
+  "Generate a new world state from the given updated entity state."
+  (assoc
+    world
+    :entities
+    (assoc
+      (:entities world)
+      (:entity-id new-entity)
+      new-entity)))
+
+; Entities
+; [the entities in our system]
+
+; Systems
+; physics system
+;  run through and move all position entries by the
+; pixi-render system
+;  run through and setup the sprites based on current x,y data
+
+; If we make the presumption that there will be a single identifying component for
+; every system we can create a simple function to loop through the entities with
+; the requested component.
+
+; Game loop runs through all the systems
+; QUESTION: how do we handle events in this? What do we do when two entities hit?
 
 (defn rotate [entity delta]
   "Change the rotate by the given delta"
@@ -43,8 +118,6 @@
     (set-position sprite
                   (+ dx (.-position.x sprite))
                   (+ dy (.-position.y sprite)))))
-
-(defrecord Entity [sprite])
 
 (defn make-entity [stage texture]
   (let [sprite (js/PIXI.Sprite. texture)]
@@ -78,6 +151,8 @@
 (swap! world (fn [] (add-entity @world bunny)))
 (swap! world (fn [] (add-entity @world my-bunny)))
 
+;; This is probably unsafe anymore, should be replaced or used in conjunction with
+;; a function that will clear up the entities in the game world as well.
 ;; function to remove all elements from the stage
 (defn empty-stage [stage]
   "Remove all Pixi DisplayObjects from the given stage."
@@ -91,14 +166,10 @@
 
 ;(empty-stage stage)
 
-;(create-simple bunny-texture)
-
-;(def my-bunny (create-simple bunny-texture))
-;(def bunny (create-simple bunny-texture))
-
 ; Hack to control which entity we are moving
 (def target-entity (atom 0))
 
+; clinp setup and keyboard handlers
 (clinp/setup!)
 
 (clinp/listen! :Z :down
