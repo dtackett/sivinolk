@@ -26,6 +26,18 @@
   (set! (.-anchor.x sprite) x)
   (set! (.-anchor.y sprite) y))
 
+(defn rotate [entity delta]
+  "Change the rotate by the given delta"
+  (let [sprite (:sprite entity)]
+    (set! (.-rotation (:sprite entity)) (+ delta (.-rotation (:sprite entity))))))
+
+(defn move [entity dx dy]
+  "Move by the given change to x and y"
+  (let [sprite (:sprite entity)]
+    (set-position sprite
+                  (+ dx (.-position.x sprite))
+                  (+ dy (.-position.y sprite)))))
+
 
 ; Components
 ; (Some components are dependent on the existance of others)
@@ -37,11 +49,13 @@
 (component pixi-renderer [sprite])
 (component position [x y])
 (component rotation [r])
-(component velocity [x, y])
+(component velocity [x y])
+(component id [id])
 
 ; Soon to be deprecated?
 (defrecord Entity [sprite])
 
+; Entity composition functions
 (defn- add-component [e c]
   "Add a component by its name to the given map"
   (assoc e (components/component-name c) c))
@@ -49,47 +63,25 @@
 (defn compose-entity [components]
   (reduce add-component {} components))
 
-;(defn get-component [entity component]
-;  (loop [components entity]
-;    (cond (empty? components) nil
-;          (instance? component (first components)) (first components)
-;          :else (recur (rest components)))))
+; Pixi system functions
+(defn- ensure-entity-on-stage! [stage entity]
+  "Ensure the entity is on the given stage"
+  (let [sprite (:sprite (:pixi-renderer entity))]
+    (if (nil? (.-stage sprite))
+      (. stage addChild sprite))))
 
-(def test-entity (compose-entity
-                    [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
-                     (rotation. 0)
-                     (position. 100 100)]))
+(defn update-display [entity]
+  "Update the pixi-renderer component with the current state"
+  (let [pos-comp (:position entity)
+        sprite (:sprite (:pixi-renderer entity))]
+    (set-position sprite (:x pos-comp) (:y pos-comp))))
 
-(:position test-entity)
+(defn pixi-setup-entity [stage entity]
+  (do
+    (ensure-entity-on-stage! stage entity)
+    (update-display entity)))
 
-;(component-name (get-component test-entity position))
 
-;(defn compound [coll c]
-;  (assoc coll (component-name c) c))
-
-;(compound {} (get-component test-entity position))
-
-;(reduce compound {} test-entity)
-
-;(Entity. [(position 10 10)
-;          (velocity 1 0)
-;          (pixi-renderer bunny-texture)])
-; Ok smart guy. You've created an entity and added all these components.
-; How do you know what components an entity has?
-
-; (-> myEntity has-component? :component)
-; (-> myEntity get-component :component)
-; (-> myEntity update-component new-component-value)
-; (-> world update-entity 1 )
-(defn update-entity [world new-entity]
-  "Generate a new world state from the given updated entity state."
-  (assoc
-    world
-    :entities
-    (assoc
-      (:entities world)
-      (:entity-id new-entity)
-      new-entity)))
 
 ; Entities
 ; [the entities in our system]
@@ -107,17 +99,7 @@
 ; Game loop runs through all the systems
 ; QUESTION: how do we handle events in this? What do we do when two entities hit?
 
-(defn rotate [entity delta]
-  "Change the rotate by the given delta"
-  (let [sprite (:sprite entity)]
-    (set! (.-rotation (:sprite entity)) (+ delta (.-rotation (:sprite entity))))))
 
-(defn move [entity dx dy]
-  "Move by the given change to x and y"
-  (let [sprite (:sprite entity)]
-    (set-position sprite
-                  (+ dx (.-position.x sprite))
-                  (+ dy (.-position.y sprite)))))
 
 (defn make-entity [stage texture]
   (let [sprite (js/PIXI.Sprite. texture)]
@@ -133,23 +115,51 @@
 ;; Create a main record to define the world
 ; TODO: Stage should be provided and this whole thing should be built with a function
 (def world (atom {:next-id 0 :entities {} :stage stage}))
+
+(def alt-world (atom {:next-id 0 :entities {} :stage stage}))
+
 ;; World should have a list of all entities in the world
 ;; World should be attached to a stage?
 ;; Each entity should have some unique id
 ;; Create a function to find an entity based on id in a world
 (defn get-entity [world entity-id]
   (get (:entities world) entity-id))
+
 ;; Create a function to add an entity to the world
 (defn add-entity [world entity]
   (let [entity-id (:next-id world)
+        ; Add an id component to the entity
+        entity (add-component entity (id. entity-id))
         entities (assoc (:entities world) entity-id entity)]
       (assoc world
         :next-id (inc entity-id)
         :entities entities)))
+
+; TODO This should blow up gracefully if the entity does not have an id component
+(defn update-entity [world entity]
+  "Generate a new world state from the given updated entity state."
+  (assoc
+    world
+    :entities
+    (assoc
+      (:entities world)
+      (-> entity :id :id)
+      entity)))
+
+
+(def test-entity (compose-entity
+                    [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
+                     (rotation. 0)
+                     (velocity. 1 1)
+                     (position. 100 100)]))
+
+
 ;; Create a function to remove an entity from the world
 
 (swap! world (fn [] (add-entity @world bunny)))
 (swap! world (fn [] (add-entity @world my-bunny)))
+
+(swap! alt-world (fn [] (add-entity @alt-world test-entity)))
 
 ;; This is probably unsafe anymore, should be replaced or used in conjunction with
 ;; a function that will clear up the entities in the game world as well.
@@ -197,21 +207,54 @@
 
 
 ;; update world function
-(defn update-world[]
+(defn update-world-old []
   "Main game update function. Everything but rendering would fall in here."
   (do
     (clinp/pulse!)
     (if (get-entity @world 0)
       (rotate (get-entity @world 0) 0.2))
-
-;    (rotate (get-entity @world 5) 0.01)
   ))
+
+; pixi render system
+(defn render-system [world]
+  (do
+    (dorun
+     (map
+      (partial pixi-setup-entity (:stage world))
+      (vals (:entities world))))
+    (. renderer render (:stage world))))
+
+; physics related stumblings
+(defn apply-velocity-to-entity [entity]
+  "Apply velocity to the given entity"
+  (let [velocity (:velocity entity)
+        position (:position entity)]
+    (add-component
+     entity
+     (merge position {:x (+ (:x position) (:x velocity))
+                      :y (+ (:y position) (:y velocity))}))))
+
+; physics system
+(defn physics-system [world]
+  (reduce
+   (fn [world entity] (update-entity world (apply-velocity-to-entity entity)))
+   world
+   (vals (:entities world))))
+
+(defn update-world! [world]
+               (swap! world #(physics-system %)))
+
+;(update-world! alt-world)
+
+;(render-system @alt-world)
 
 ;; setup animation loop
 (defn animate[]
   "Core callback loop."
   (js/requestAnimFrame animate)
-  (update-world)
+  (update-world-old)
+  (update-world! alt-world)
+  (render-system @alt-world)
   (. renderer render stage))
 
 (js/requestAnimFrame animate)
