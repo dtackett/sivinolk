@@ -26,17 +26,11 @@
   (set! (.-anchor.x sprite) x)
   (set! (.-anchor.y sprite) y))
 
+; TODO Implement some system to replace this functionality
 (defn rotate [entity delta]
   "Change the rotate by the given delta"
   (let [sprite (:sprite entity)]
     (set! (.-rotation (:sprite entity)) (+ delta (.-rotation (:sprite entity))))))
-
-(defn move-old [entity dx dy]
-  "Move by the given change to x and y"
-  (let [sprite (:sprite entity)]
-    (set-position sprite
-                  (+ dx (.-position.x sprite))
-                  (+ dy (.-position.y sprite)))))
 
 
 ; Components
@@ -51,9 +45,6 @@
 (component rotation [r]) ; Currently nothing pays attention to the rotation
 (component velocity [x y])
 (component id [id])
-
-; Soon to be deprecated?
-(defrecord Entity [sprite])
 
 ; Entity composition functions
 (defn- add-component [e c]
@@ -100,18 +91,6 @@
 ; QUESTION: how do we handle events in this? What do we do when two entities hit?
 
 
-
-(defn make-entity [stage texture]
-  (let [sprite (js/PIXI.Sprite. texture)]
-    (set-position sprite 100 50)
-    (set-anchor sprite 0.5 0.5)
-    (. stage addChild sprite)
-  (Entity. sprite)))
-
-
-(def my-bunny (make-entity stage bunny-texture))
-(def bunny (make-entity stage bunny-texture))
-
 ;; World should have a list of all entities in the world
 ;; World should be attached to a stage?
 ;; Each entity should have some unique id
@@ -155,27 +134,23 @@
 
 ;; Create a main record to define the world
 ; TODO: Stage should be provided and this whole thing should be built with a function
-(def old-world (atom {:next-id 0 :entities {} :stage stage}))
 
-; Alt-world works on the new entity system
-(def alt-world (atom {:next-id 0 :entities {} :stage stage}))
+; world-state works on the new entity system
+(def world-state (atom {:next-id 0 :entities {} :stage stage}))
 
-(swap! old-world (fn [] (add-entity @old-world bunny)))
-(swap! old-world (fn [] (add-entity @old-world my-bunny)))
-
-(swap! alt-world (fn [] (add-entity @alt-world (compose-entity
+(swap! world-state (fn [] (add-entity @world-state (compose-entity
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
                          (velocity. 0 0)
                          (position. 100 100)]))))
 
-(swap! alt-world (fn [] (add-entity @alt-world (compose-entity
+(swap! world-state (fn [] (add-entity @world-state (compose-entity
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
                          (velocity. 0 1)
                          (position. 100 100)]))))
 
-(swap! alt-world (fn [] (add-entity @alt-world (compose-entity
+(swap! world-state (fn [] (add-entity @world-state (compose-entity
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
                          (velocity. 10 4)
@@ -195,16 +170,6 @@
    (.slice (.-children stage) 0))))
 
 ;(empty-stage stage)
-
-
-;; update world function
-(defn update-world-old []
-  "Main game update function. Everything but rendering would fall in here."
-  (do
-    (clinp/pulse!)
-    (if (get-entity @old-world 0)
-      (rotate (get-entity @old-world 0) 0.2))
-  ))
 
 ; pixi render system
 (defn render-system [world]
@@ -241,6 +206,7 @@
    (vals (:entities world))))
 
 (defn update-world! [world]
+               (clinp/pulse!)
                (swap! world #(physics-system %)))
 
 ; Hack to control which entity we are moving
@@ -252,33 +218,32 @@
 (clinp/listen! :Z :down
               (fn [] (swap! target-entity
                             (fn [cur]
-                              (if (>= (inc cur) (:next-id @alt-world))
+                              (if (>= (inc cur) (:next-id @world-state))
                                 0
                                 (inc cur))))))
 
 (clinp/listen! :X :down
-               #((simple-add-entity! alt-world)
-                 (swap! target-entity (fn [] (dec (:next-id @alt-world))))))
+               #((simple-add-entity! world-state)
+                 (swap! target-entity (fn [] (dec (:next-id @world-state))))))
 
 (clinp/listen! :UP :pulse
-               #(simple-input-move! alt-world @target-entity 0 -1))
+               #(simple-input-move! world-state @target-entity 0 -1))
 
 (clinp/listen! :DOWN :pulse
-               #(simple-input-move! alt-world @target-entity 0 1))
+               #(simple-input-move! world-state @target-entity 0 1))
 
 (clinp/listen! :LEFT :pulse
-               #(simple-input-move! alt-world @target-entity -1 0))
+               #(simple-input-move! world-state @target-entity -1 0))
 
 (clinp/listen! :RIGHT :pulse
-               #(simple-input-move! alt-world @target-entity 1 0))
+               #(simple-input-move! world-state @target-entity 1 0))
 
 ;; setup animation loop
 (defn animate[]
   "Core callback loop."
   (js/requestAnimFrame animate)
-  (update-world-old)
-  (update-world! alt-world)
-  (render-system @alt-world)
+  (update-world! world-state)
+  (render-system @world-state)
   (. renderer render stage))
 
 (js/requestAnimFrame animate)
