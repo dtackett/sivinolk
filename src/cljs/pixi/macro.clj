@@ -7,7 +7,7 @@
        (~(symbol "component-name") [~(symbol "_")] ~(keyword comp-name))
      ~@r))
 
-(macroexpand-1 '(component :position [x y z]))
+; (macroexpand-1 '(component :position [x y z]))
 
 ; crude implementation could loop through all entities and see if the needed
 ; components are available. If they are then the system should operate on it.

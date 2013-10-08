@@ -14,6 +14,8 @@
 
 (def bunny-texture (js/PIXI.Texture.fromImage "images/bunny.png"))
 
+(def ugly-block-texture (js/PIXI.Texture.fromImage "images/ugly-block.png"))
+
 ;; some helper functions for setting up sprites
 
 ;; I feel like set-position and set-anchor could be made easier
@@ -44,6 +46,8 @@
 (component position [x y])
 (component rotation [r]) ; Currently nothing pays attention to the rotation
 (component velocity [x y])
+(component aabb [w h])      ; axis aligned bounding box
+(component controllable []) ; Whether the entity can be controlled
 (component id [id])
 
 ; Entity composition functions
@@ -68,9 +72,10 @@
     (set-position sprite (:x pos-comp) (:y pos-comp))))
 
 (defn pixi-setup-entity [stage entity]
-  (do
-    (ensure-entity-on-stage! stage entity)
-    (update-display entity)))
+  (if (:pixi-renderer entity)
+    (do
+      (ensure-entity-on-stage! stage entity)
+      (update-display entity))))
 
 
 
@@ -129,7 +134,8 @@
   (swap! world #(add-entity @world (compose-entity
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
-                         (velocity. 0 0)
+                         (velocity. 0 3)
+                         (controllable.)
                          (position. 100 100)]))))
 
 ;; Create a main record to define the world
@@ -138,22 +144,32 @@
 ; world-state works on the new entity system
 (def world-state (atom {:next-id 0 :entities {} :stage stage}))
 
+;; Add a simple world block
+(swap! world-state (fn [] (add-entity @world-state (compose-entity
+                        [(pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
+                         (position. 100 190)
+                         (aabb. 16 16)]))))
+
 (swap! world-state (fn [] (add-entity @world-state (compose-entity
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
-                         (velocity. 0 0)
+                         (velocity. 0 3)
+                         (aabb. 26 37)
+                         (controllable.)
                          (position. 100 100)]))))
 
 (swap! world-state (fn [] (add-entity @world-state (compose-entity
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
-                         (velocity. 0 1)
+                         (velocity. 0 3)
+                         (controllable.)
                          (position. 100 100)]))))
 
 (swap! world-state (fn [] (add-entity @world-state (compose-entity
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
                          (velocity. 10 4)
+                         (controllable.)
                          (position. 100 100)]))))
 
 ;; This is probably unsafe anymore, should be replaced or used in conjunction with
@@ -198,10 +214,64 @@
   (let [velocity (:velocity entity)]
     (move entity (:x velocity) (:y velocity))))
 
+(def world-bound {:x 250 :y 250})
+
+(get world-bound (keyword "x"))
+
+(defn HACK-check-bound [keyname position world-bound]
+  (let [k (keyword keyname)]
+    (cond (> (k position) (k world-bound))
+            (k world-bound)
+          (< (k position) 0)
+            0
+          :default (k position))))
+
+;(HACK-check-bound "x" (position. 110 10) {:x 100 :y 100})
+
+(defn collision? [ea eb]
+  (let []))
+
+(defn get-bounds [entity]
+  "Get the world bounds of the given entity. Returns nil if the entity does not have the appropriate components."
+  (let [position (:position entity)
+        aabb (:aabb entity)]
+    (if (and position
+             aabb)
+      {:l (:x position)
+       :t (:y position)
+       :r (+ (:x position) (:w aabb))
+       :b (+ (:y position) (:h aabb))})))
+
+(get-bounds (compose-entity [(position. 10 10)]))
+(get-bounds (compose-entity [(position. 10 10) (aabb. 10 10)]))
+(get-bounds (compose-entity [(position. 10 30) (aabb. 15 5)]))
+
+(compose-entity [(position. 5 10) (aabb. 10 10)]) ; moved
+(compose-entity [(position. 10 10) (aabb. 10 10)]) ; didn't move
+
+(defn HACK-force-world-bounds [entity]
+  (let [position (:position entity)]
+      ; reset position to world bound
+      ; TOTHINK how to handle velocity change?
+      (add-component
+       entity
+       (merge position {:x (HACK-check-bound "x" position world-bound)
+                        :y (HACK-check-bound "y" position world-bound)}))))
+
+(defn do-physics-simulation [entity]
+  "Apply physics simulation to the given entity"
+  ; apply velocity
+  (if (:velocity entity)
+    (HACK-force-world-bounds (apply-velocity-to-entity entity)))
+  ; TODO check for collisions
+  ; TODO resolve collisions
+  ; TOTHINK what to do with collision events?
+  )
+
 ; physics system
 (defn physics-system [world]
   (reduce
-   (fn [world entity] (update-entity world (apply-velocity-to-entity entity)))
+   (fn [world entity] (update-entity world (do-physics-simulation entity)))
    world
    (vals (:entities world))))
 
@@ -209,34 +279,38 @@
                (clinp/pulse!)
                (swap! world #(physics-system %)))
 
-; Hack to control which entity we are moving
-(def target-entity (atom 0))
-
 ; clinp setup and keyboard handlers
 (clinp/setup!)
 
+(defn- select-next-controllable [world current-target]
+  "Select the next entity that has a controllable component. This is not smart enough to avoid infinite loops."
+  (loop [t (inc current-target)]
+    (let [newt (if (>= t (:next-id world)) 0 t)]
+      (if (:controllable (get-entity world newt))
+        newt
+        (recur (inc newt))))))
+
+; Hack to control which entity we are moving
+(def target-entity (atom (select-next-controllable @world-state 0)))
+
 (clinp/listen! :Z :down
-              (fn [] (swap! target-entity
-                            (fn [cur]
-                              (if (>= (inc cur) (:next-id @world-state))
-                                0
-                                (inc cur))))))
+              (fn [] (swap! target-entity #(select-next-controllable @world-state %))))
 
 (clinp/listen! :X :down
                #((simple-add-entity! world-state)
                  (swap! target-entity (fn [] (dec (:next-id @world-state))))))
 
 (clinp/listen! :UP :pulse
-               #(simple-input-move! world-state @target-entity 0 -1))
+               #(simple-input-move! world-state @target-entity 0 -6))
 
-(clinp/listen! :DOWN :pulse
-               #(simple-input-move! world-state @target-entity 0 1))
+;(clinp/listen! :DOWN :pulse
+;               #(simple-input-move! world-state @target-entity 0 2))
 
 (clinp/listen! :LEFT :pulse
-               #(simple-input-move! world-state @target-entity -1 0))
+               #(simple-input-move! world-state @target-entity -3 0))
 
 (clinp/listen! :RIGHT :pulse
-               #(simple-input-move! world-state @target-entity 1 0))
+               #(simple-input-move! world-state @target-entity 3 0))
 
 ;; setup animation loop
 (defn animate[]
