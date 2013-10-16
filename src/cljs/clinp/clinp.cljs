@@ -8,26 +8,6 @@
 ; queue would have to be rebuilt every pulse? That might not be too bad if
 ; you assume that from pulse to pulse the down keys don't change that much.
 
-; TODO tests
-; test get-key-code for known key
-; test get-key-code for unknown key
-; test exec on non registered key handler
-; test exec on non registered phase
-; test exec on a register key handler and phase
-; keydown test false
-; keydown test true
-; setup
-; teardown
-; listen
-; listen same key, new phase
-; listen bad key
-; listen bad phase
-; listen overwrite
-; unlisten
-; unlisten bad key
-; unlisten bad phase
-; unlisten non-registered
-
 ; should follow the format of a map of key-code to a map of phases to a callback
 (def listeners (atom {}))
 
@@ -37,9 +17,9 @@
   "Find the keyCode integer value for a keyword"
   (aget js/goog.events.KeyCodes (name key-name)))
 
-(defn- exec-handler! [phase key-code]
+(defn- exec-handler! [listeners phase key-code]
   "Execute the function (if found) for the given bind key and phase"
-  (let [handler (get (get @listeners key-code) phase)]
+  (let [handler (get (get listeners key-code) phase)]
     (if (not (nil? handler))
       (handler))))
 
@@ -55,7 +35,7 @@
       (fn [event]
         (do
           (if (not (contains? @downkeys (.-keyCode event)))
-            (exec-handler! :down (.-keyCode event)))
+            (exec-handler! @listeners :down (.-keyCode event)))
           (swap! downkeys conj (.-keyCode event)))))
     ; Setup keyup handler
     (event/listen
@@ -63,7 +43,7 @@
       "keyup"
       (fn [event]
           (if (contains? @downkeys (.-keyCode event))
-            (exec-handler! :up (.-keyCode event)))
+            (exec-handler! @listeners :up (.-keyCode event)))
         (swap! downkeys disj (.-keyCode event))))))
 
 (defn teardown! []
@@ -94,6 +74,10 @@
 (defn unlisten! [bind-key phase]
   "Remove a callback for a given key and phase.")
 
-(defn pulse! []
-  "Trigger the pulse phase."
-  (dorun (map (partial exec-handler! :pulse) @downkeys)))
+(defn pulse!
+  ([]
+   "Default pulse call, uses global listeners and downkeys"
+   (pulse! @listeners @downkeys))
+  ([listeners downkeys]
+   "Fire a pulse event for all held down keys for the given listeners"
+   (dorun (map (partial exec-handler! listeners :pulse) downkeys))))
