@@ -10,3 +10,6 @@ pom.xml
 .lein-plugins
 .lein-env
 .DS_Store
+.nrepl-port
+/repl
+/resources/public/js/cljs-pixi_dev.js
