@@ -2,6 +2,8 @@
 
 This is an experiment in using [Pixi.js](http://www.pixijs.com/) and [ClojureScript](http://clojurescript.com/)
 
+The above discription is no longer accurate. This is more of an attempt at creating a basic game now.
+
 ## Prerequisites
 
 You will need [Leiningen][1] 1.7.0 or above installed.
@@ -10,13 +12,17 @@ You will need [Leiningen][1] 1.7.0 or above installed.
 
 ## Running
 
+There are two build profiles. One for development which contains tests and one for production which omits the tests.
+
 To compile the clojurescript run:
 
-	lein cljsbuild once
+	lein cljsbuild once [profile]
 
 To setup auto complication run:
 
-	lein cljsbuild auto
+	lein cljsbuild auto [profile]
+
+If the dev profile is uses then the tests will be re-run after each build.
 
 
 To start a web server for the application, run:

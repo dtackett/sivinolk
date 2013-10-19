@@ -135,6 +135,7 @@
                         [(pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                          (rotation. 0)
                          (velocity. 0 3)
+                         (aabb. 26 37)
                          (controllable.)
                          (position. 100 100)]))))
 
@@ -216,8 +217,6 @@
 
 (def world-bound {:x 250 :y 250})
 
-(get world-bound (keyword "x"))
-
 (defn HACK-check-bound [keyname position world-bound]
   (let [k (keyword keyname)]
     (cond (> (k position) (k world-bound))
@@ -226,10 +225,16 @@
             0
           :default (k position))))
 
-;(HACK-check-bound "x" (position. 110 10) {:x 100 :y 100})
+(defn HACK-force-world-bounds [entity]
+  (let [position (:position entity)]
+      ; reset position to world bound
+      ; TOTHINK how to handle velocity change?
+      (add-component
+       entity
+       (merge position {:x (HACK-check-bound "x" position world-bound)
+                        :y (HACK-check-bound "y" position world-bound)}))))
 
-(defn collision? [ea eb]
-  (let []))
+;(HACK-check-bound "x" (position. 110 10) {:x 100 :y 100})
 
 (defn get-bounds [entity]
   "Get the world bounds of the given entity. Returns nil if the entity does not have the appropriate components."
@@ -242,27 +247,64 @@
        :r (+ (:x position) (:w aabb))
        :b (+ (:y position) (:h aabb))})))
 
-(get-bounds (compose-entity [(position. 10 10)]))
-(get-bounds (compose-entity [(position. 10 10) (aabb. 10 10)]))
-(get-bounds (compose-entity [(position. 10 30) (aabb. 15 5)]))
+(defn get-midpoint [entity]
+  "Get the midpoint of the given entity. Based on position and aabb."
+  (let [position (:position entity)
+        aabb (:aabb entity)]
+    (if (and position aabb)
+      {:x (+ (:x position) (/ (:w aabb) 2))
+       :y (+ (:y position) (/ (:h aabb) 2))})))
 
-(compose-entity [(position. 5 10) (aabb. 10 10)]) ; moved
-(compose-entity [(position. 10 10) (aabb. 10 10)]) ; didn't move
+(defn collision? [ea eb]
+  "Check if the two given entities are in collision"
+  (if (= (-> ea :id :id) (-> eb :id :id))
+    false
+    (let [collider (get-bounds ea)
+          collidee (get-bounds eb)]
+      (if (and collider collidee)
+        (not
+         (or (< (:b collider) (:t collidee))
+             (< (:r collider) (:l collidee))
+             (> (:l collider) (:r collidee))
+             (> (:t collider) (:b collidee))))
+        false))))
 
-(defn HACK-force-world-bounds [entity]
-  (let [position (:position entity)]
-      ; reset position to world bound
-      ; TOTHINK how to handle velocity change?
-      (add-component
-       entity
-       (merge position {:x (HACK-check-bound "x" position world-bound)
-                        :y (HACK-check-bound "y" position world-bound)}))))
+(defn resolve-collision [ea eb]
+  "Crude collision resolver. Assumes that a collision has already been verified."
+  (let [mida (get-midpoint ea)
+        midb (get-midpoint eb)
+        dx (- (:x mida) (:x midb))
+        dy (- (:y mida) (:y midb))]
+    (if
+      (> (.abs js/Math dx) (.abs js/Math dy))
+      (if (> dx 0)
+        ; approach is on the horizontal
+        (add-component ea (merge (:position ea) {:x (+ (:x (:position eb)) (:w (:aabb eb)))}))
+        (add-component ea (merge (:position ea) {:x (- (:x (:position eb)) (:w (:aabb ea)))})))
+      (if (> dy 0)
+        ; approach is on the vertical
+        (add-component ea (merge (:position ea) {:y (+ (:y (:position eb)) (:h (:aabb eb)))}))
+        (add-component ea (merge (:position ea) {:y (- (:y (:position eb)) (:h (:aabb ea)))})))
+      )))
 
-(defn do-physics-simulation [entity]
+(defn resolve-collisions [entity world]
+  (reduce
+   (fn [entity test-entity]
+     (if (collision? entity test-entity)
+       (resolve-collision entity test-entity)
+       entity))
+   entity
+   (vals (:entities world))
+   ))
+
+(defn do-physics-simulation [entity world]
   "Apply physics simulation to the given entity"
   ; apply velocity
   (if (:velocity entity)
-    (HACK-force-world-bounds (apply-velocity-to-entity entity)))
+    (-> entity
+        apply-velocity-to-entity
+        (resolve-collisions world)
+        HACK-force-world-bounds))
   ; TODO check for collisions
   ; TODO resolve collisions
   ; TOTHINK what to do with collision events?
@@ -271,9 +313,9 @@
 ; physics system
 (defn physics-system [world]
   (reduce
-   (fn [world entity] (update-entity world (do-physics-simulation entity)))
-   world
-   (vals (:entities world))))
+   (fn [world entity] (update-entity world (do-physics-simulation entity world)))
+    world
+    (vals (:entities world))))
 
 (defn update-world! [world]
                (clinp/pulse!)
