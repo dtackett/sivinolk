@@ -1,7 +1,8 @@
 ;; Pixi.js system
 (ns sivinolk.pixi)
 
-(defn setup-world [world]
+(defn setup-world! [world]
+  "This sets up the pixi.js renderer and stage."
   (let [renderer (js/PIXI.autoDetectRenderer 400 300)
         stage (js/PIXI.Stage. 0x66ff99)]
     (do (.appendChild (.-body js/document) (.-view renderer))
