@@ -1,5 +1,5 @@
 (ns sivinolk.components
-  (:require-macros [sivinolk.macro :refer [component]]))
+  (:require-macros [sivinolk.macro :refer [defcomponent]]))
 
 (defprotocol component-proto (component-name [_]))
 
@@ -10,10 +10,10 @@
 ; physics component [vx, vy, ax, ay]
 ; render component [sprite]
 
-(component pixi-renderer [sprite])
-(component position [x y])
-(component rotation [r]) ; Currently nothing pays attention to the rotation
-(component velocity [x y])
-(component aabb [w h])      ; axis aligned bounding box
-(component controllable []) ; Whether the entity can be controlled
-(component id [id])
+(defcomponent pixi-renderer [sprite])
+(defcomponent position [x y])
+(defcomponent rotation [r]) ; Currently nothing pays attention to the rotation
+(defcomponent velocity [x y])
+(defcomponent aabb [w h])      ; axis aligned bounding box
+(defcomponent controllable []) ; Whether the entity can be controlled
+(defcomponent id [id])

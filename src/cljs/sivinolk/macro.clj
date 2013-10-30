@@ -1,6 +1,6 @@
 (ns sivinolk.macro)
 
-(defmacro component [comp-name props & r]
+(defmacro defcomponent [comp-name props & r]
   `(defrecord
      ~(symbol (name comp-name)) ~props
      sivinolk.components/component-proto
