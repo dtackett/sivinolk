@@ -29,3 +29,5 @@
       (:entities world)
       (-> entity :id :id)
       entity)))
+
+;; TODO Create a function to remove an entity from the world
