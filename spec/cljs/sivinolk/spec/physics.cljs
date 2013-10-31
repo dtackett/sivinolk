@@ -1,6 +1,8 @@
-(ns pixi.physics.test
+(ns sivinolk.spec.physics
     (:require [specljs.core :as speclj]
-              [pixi-cljs.core :as pixi])
+              [sivinolk.entity :as entity]
+              [sivinolk.components :as comps]
+              [sivinolk.physics :as physics])
     (:require-macros [specljs.core :refer [describe it should should-not should-be-nil should==]]))
 
 ;; TODO These tests work on idividual entities
@@ -9,68 +11,68 @@
 (defn create-entity
   ([x y w h] (create-entity x y w h 1))
   ([x y w h id]
-   (pixi/compose-entity [(pixi/position. x y)
-                         (pixi/aabb. w h)
-                         (pixi/id. id)])))
+   (entity/compose-entity [(comps/position. x y)
+                           (comps/aabb. w h)
+                           (comps/id. id)])))
 
 (describe "Getting current bounds"
           (it "Get bounds for an entity with a position and an aabb"
               (should== {:l 10 :t 10 :r 20 :b 20}
-                       (pixi/get-bounds (create-entity 10 10 10 10))))
+                       (physics/get-bounds (create-entity 10 10 10 10))))
 
           (it "Get bounds for an entity with just a position"
               (should-be-nil
-               (pixi/get-bounds
-                (pixi/compose-entity [(pixi/position. 10 10)]))))
+               (physics/get-bounds
+                (entity/compose-entity [(comps/position. 10 10)]))))
 
           (it "Get bounds for an entity with just an aabb"
               (should-be-nil
-               (pixi/get-bounds
-                (pixi/compose-entity [(pixi/aabb. 10 10)])))))
+               (physics/get-bounds
+                (entity/compose-entity [(comps/aabb. 10 10)])))))
 
 (describe "Getting the midpoint"
           (it "Get midpoint for an entity with a position "
               (should== {:x 7.5 :y 7.5}
-                        (pixi/get-midpoint (create-entity 5 5 5 5))))
+                        (physics/get-midpoint (create-entity 5 5 5 5))))
 
           (it "Get midpoint for an entity with just a position"
               (should-be-nil
-               (pixi/get-midpoint
-                (pixi/compose-entity [(pixi/position. 10 10)]))))
+               (physics/get-midpoint
+                (entity/compose-entity [(comps/position. 10 10)]))))
 
           (it "Get midpoint for an entity with just an aabb"
               (should-be-nil
-               (pixi/get-midpoint
-                (pixi/compose-entity [(pixi/aabb. 10 10)])))))
+               (physics/get-midpoint
+                (entity/compose-entity [(comps/aabb. 10 10)])))))
 
 (describe "Collision tests"
           (it "Two non-colliding entities"
               (should-not
-               (pixi/collision?
+               (physics/collision?
                 (create-entity 0 0 10 10 0)
                 (create-entity 50 50 10 10 1))))
 
           (it "Collider colliding from above"
               (should
-               (pixi/collision?
+               (physics/collision?
                 (create-entity 0 8 10 10 0)
                 (create-entity 0 15 10 10 1))))
 
           (it "Collider colliding from left"
               (should
-               (pixi/collision?
+               (physics/collision?
                 (create-entity 8 0 10 10 0)
                 (create-entity 15 0 10 10 1))))
 
           (it "Collider colliding from right"
               (should
-               (pixi/collision?
+               (physics/collision?
                 (create-entity 23 0 10 10 0)
                 (create-entity 15 0 10 10 1))))
 
           (it "Collider colliding from bottom"
               (should
-               (pixi/collision?
+               (physics/collision?
                 (create-entity 0 23 10 10 0)
                 (create-entity 0 15 10 10 1)))))
 
@@ -79,7 +81,7 @@
               (should==
                {:x 0 :y 5}
                (:position
-                (pixi/resolve-collision
+                (physics/resolve-collision
                  (create-entity 0 8 10 10)
                  (create-entity 0 15 10 10)))))
 
@@ -87,7 +89,7 @@
               (should==
                {:x 0 :y 25}
                (:position
-                (pixi/resolve-collision
+                (physics/resolve-collision
                  (create-entity 0 23 10 10)
                  (create-entity 0 15 10 10)))))
 
@@ -95,7 +97,7 @@
               (should==
                {:x 5 :y 0}
                (:position
-                (pixi/resolve-collision
+                (physics/resolve-collision
                  (create-entity 8 0 10 10)
                  (create-entity 15 0 10 10)))))
 
@@ -103,6 +105,6 @@
               (should==
                {:x 25 :y 0}
                (:position
-                (pixi/resolve-collision
+                (physics/resolve-collision
                  (create-entity 23 0 10 10)
                  (create-entity 15 0 10 10))))))

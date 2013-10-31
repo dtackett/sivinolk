@@ -3,7 +3,7 @@ var page = require('webpage').create();
 var url = phantom.args[0];
 
 page.onConsoleMessage = function (message) {
-    fs.write("/dev/stdout", message, "w");    
+    fs.write("/dev/stdout", message, "w");
 };
 
 console.log("Loading URL: " + url);

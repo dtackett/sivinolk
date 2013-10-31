@@ -1,8 +1,6 @@
-# pixi cljs
+# sivinolk cljs
 
-This is an experiment in using [Pixi.js](http://www.pixijs.com/) and [ClojureScript](http://clojurescript.com/)
-
-The above discription is no longer accurate. This is more of an attempt at creating a basic game now.
+This is an experiment in using [Pixi.js](http://www.pixijs.com/) and [ClojureScript](http://clojurescript.com/) to create a Component Entity System based game.
 
 ## Prerequisites
 

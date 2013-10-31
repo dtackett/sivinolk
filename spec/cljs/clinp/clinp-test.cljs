@@ -1,5 +1,6 @@
 (ns clinp.test
-  (:require [clinp.core :as clinp])
+  (:require [clinp.core :as clinp]
+            [specljs.core])
   (:require-macros [specljs.core :refer [describe it should should-not should= should-be-nil should-not-be-nil]]))
 
 (describe "Key code lookups"
@@ -29,7 +30,8 @@
           (it "Overwrite an existing listener"))
 
 (describe "Unlisten"
-          (it "Basic unlisten")
+          (it "Basic unlisten"
+              false)
           (it "Unlisten to a non-existant key")
           (it "Unlisten to a non-existant phase")
           (it "Unlisten to a key/phase combo that isn't registered"))
