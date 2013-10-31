@@ -33,6 +33,11 @@
                                                                (comps/position. 100 190)
                                                                (comps/aabb. 16 16)]))))
 
+    (swap! world-state (fn [] (world/add-entity @world-state (entity/compose-entity
+                                                              [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
+                                                               (comps/position. 116 190)
+                                                               (comps/aabb. 16 16)]))))
+
     ; Add some test bunnies
     (swap! world-state (fn [] (world/add-entity @world-state (entity/compose-entity
                                                               [(comps/pixi-renderer. (js/PIXI.Sprite. bunny-texture))
