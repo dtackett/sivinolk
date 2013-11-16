@@ -6,7 +6,7 @@
   :source-paths ["src/clj"]
 
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/clojurescript "0.0-1978"]
+                 [org.clojure/clojurescript "0.0-2030"]
                  [speclj "2.8.0"]
                  [specljs "2.8.0"]
                  [compojure "1.1.5"]]
@@ -14,7 +14,7 @@
   ;; lein-cljsbuild plugin to build a CLJS project
   :plugins [
             ;; cljsbuild plugin
-            [lein-cljsbuild "0.3.4"]
+            [lein-cljsbuild "1.0.0-alpha2"]
 
             ;; speclj
             [speclj "2.8.0"]
@@ -58,7 +58,9 @@
                        ; for details on how it's run.
                        :dev {
                              :source-paths ["src/cljs" "spec/cljs"]
-                             :compiler {:output-to "resources/public/js/sivinolk_dev.js"
+                             :compiler {:output-dir "resources/public/js/sivinolk"
+                                        :output-to "resources/public/js/sivinolk/sivinolk_dev.js"
+                                        :source-map "resources/public/js/sivinolk/sivinolk_dev.js.map"
                                         :optimizations :whitespace
                                         :pretty-print true}
                              :notify-command ["phantomjs"
