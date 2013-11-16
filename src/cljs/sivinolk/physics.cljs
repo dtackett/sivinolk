@@ -2,7 +2,7 @@
   (:require [sivinolk.entity :as entity]
             [sivinolk.world :as world]))
 
-(def world-bound {:x 250 :y 250})
+(def world-bound {:x 500 :y 250})
 
 (defn HACK-check-bound [keyname position world-bound]
   (let [k (keyword keyname)]
@@ -21,21 +21,24 @@
        (merge position {:x (HACK-check-bound "x" position world-bound)
                         :y (HACK-check-bound "y" position world-bound)}))))
 
-(defn move [entity x y]
+(defn move
   "Move the entity by the given x and y"
+  [entity x y]
   (let [position (:position entity)]
       (entity/add-component
        entity
        (merge position {:x (+ x (:x position))
                         :y (+ y (:y position))}))))
 
-(defn apply-velocity-to-entity [entity]
+(defn apply-velocity-to-entity
   "Apply velocity to the given entity"
+  [entity]
   (let [velocity (:velocity entity)]
     (move entity (:x velocity) (:y velocity))))
 
-(defn get-bounds [entity]
+(defn get-bounds
   "Get the world bounds of the given entity. Returns nil if the entity does not have the appropriate components."
+  [entity]
   (let [position (:position entity)
         aabb (:aabb entity)]
     (if (and position
@@ -45,16 +48,18 @@
        :r (+ (:x position) (:w aabb))
        :b (+ (:y position) (:h aabb))})))
 
-(defn get-midpoint [entity]
+(defn get-midpoint
   "Get the midpoint of the given entity. Based on position and aabb."
+  [entity]
   (let [position (:position entity)
         aabb (:aabb entity)]
     (if (and position aabb)
       {:x (+ (:x position) (/ (:w aabb) 2))
        :y (+ (:y position) (/ (:h aabb) 2))})))
 
-(defn collision? [ea eb]
+(defn collision?
   "Check if the two given entities are in collision"
+  [ea eb]
   (if (= (-> ea :id :id) (-> eb :id :id))
     false
     (let [collider (get-bounds ea)
@@ -67,8 +72,9 @@
              (> (:t collider) (:b collidee))))
         false))))
 
-(defn resolve-collision [ea eb]
+(defn resolve-collision
   "Crude collision resolver. Assumes that a collision has already been verified."
+  [ea eb]
   (let [mida (get-midpoint ea)
         midb (get-midpoint eb)
         dx (- (:x mida) (:x midb))
@@ -95,8 +101,9 @@
    (vals (:entities world))
    ))
 
-(defn do-physics-simulation [entity world]
+(defn do-physics-simulation
   "Apply physics simulation to the given entity"
+  [entity world]
   ; apply velocity
   (if (:velocity entity)
     (-> entity

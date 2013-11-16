@@ -25,7 +25,7 @@ If the dev profile is uses then the tests will be re-run after each build.
 
 To start a web server for the application, run:
 
-    lein ring server
+    lein ring server-headless
 
 ## License
 

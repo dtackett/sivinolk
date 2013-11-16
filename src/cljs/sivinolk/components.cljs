@@ -15,5 +15,5 @@
 (defcomponent rotation [r]) ; Currently nothing pays attention to the rotation
 (defcomponent velocity [x y])
 (defcomponent aabb [w h])      ; axis aligned bounding box
-(defcomponent controllable []) ; Whether the entity can be controlled
+(defcomponent controllable [start-jump-time]) ; Whether the entity can be controlled
 (defcomponent id [id])

@@ -1,8 +1,9 @@
 ;; Pixi.js system
 (ns sivinolk.pixi)
 
-(defn setup-world! [world]
+(defn setup-world!
   "This sets up the pixi.js renderer and stage."
+  [world]
   (let [renderer (js/PIXI.autoDetectRenderer 400 300)
         stage (js/PIXI.Stage. 0x66ff99)]
     (do (.appendChild (.-body js/document) (.-view renderer))
@@ -20,20 +21,23 @@
   (set! (.-anchor.y sprite) y))
 
 ; TODO Implement some system to replace this functionality
-(defn rotate [entity delta]
+(defn rotate
   "Change the rotate by the given delta"
+  [entity delta]
   (let [sprite (:sprite entity)]
     (set! (.-rotation (:sprite entity)) (+ delta (.-rotation (:sprite entity))))))
 
 ; Pixi system functions
-(defn ensure-entity-on-stage! [stage entity]
+(defn ensure-entity-on-stage!
   "Ensure the entity is on the given stage"
+  [stage entity]
   (let [sprite (:sprite (:pixi-renderer entity))]
     (if (nil? (.-stage sprite))
       (. stage addChild sprite))))
 
-(defn update-display [entity]
+(defn update-display
   "Update the pixi-renderer component with the current state"
+  [entity]
   (let [pos-comp (:position entity)
         sprite (:sprite (:pixi-renderer entity))]
     (set-position sprite (:x pos-comp) (:y pos-comp))))
@@ -56,8 +60,9 @@
 ;; This is probably unsafe anymore, should be replaced or used in conjunction with
 ;; a function that will clear up the entities in the game world as well.
 ;; function to remove all elements from the stage
-(defn empty-stage [stage]
+(defn empty-stage
   "Remove all Pixi DisplayObjects from the given stage."
+  [stage]
   (doall (map
    (fn [target]
     ;; (.log js/console target)
