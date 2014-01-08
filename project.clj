@@ -14,7 +14,7 @@
   ;; lein-cljsbuild plugin to build a CLJS project
   :plugins [
             ;; cljsbuild plugin
-            [lein-cljsbuild "1.0.0-alpha2"]
+            [lein-cljsbuild "1.0.0"]
 
             ;; speclj
             [speclj "2.8.0"]
