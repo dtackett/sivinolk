@@ -9,7 +9,8 @@
                  [org.clojure/clojurescript "0.0-2030"]
                  [speclj "2.8.0"]
                  [specljs "2.8.0"]
-                 [compojure "1.1.5"]]
+                 [compojure "1.1.5"]
+                 [clinp "0.1.0-SNAPSHOT"]]
 
   ;; lein-cljsbuild plugin to build a CLJS project
   :plugins [
