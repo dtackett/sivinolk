@@ -1,6 +1,6 @@
 (ns sivinolk.physics
-  (:require [sivinolk.entity :as entity]
-            [sivinolk.world :as world]))
+  (:require [vyrlynd.entity :as entity]
+            [vyrlynd.world :as world]))
 
 (def world-bound {:x 500 :y 250})
 

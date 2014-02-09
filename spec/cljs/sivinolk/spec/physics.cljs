@@ -1,6 +1,7 @@
 (ns sivinolk.spec.physics
     (:require [specljs.core :as speclj]
-              [sivinolk.entity :as entity]
+              [vyrlynd.entity :as entity]
+              [vyrlynd.components :as core-comps]
               [sivinolk.components :as comps]
               [sivinolk.physics :as physics])
     (:require-macros [specljs.core :refer [describe it should should-not should-be-nil should==]]))
@@ -13,7 +14,7 @@
   ([x y w h id]
    (entity/compose-entity [(comps/position. x y)
                            (comps/aabb. w h)
-                           (comps/id. id)])))
+                           (core-comps/id. id)])))
 
 (describe "Getting current bounds"
           (it "Get bounds for an entity with a position and an aabb"

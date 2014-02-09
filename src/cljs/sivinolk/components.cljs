@@ -1,5 +1,5 @@
 (ns sivinolk.components
-  (:require-macros [sivinolk.macro :refer [defcomponent]]))
+  (:require-macros [vyrlynd.macro :refer [defcomponent]]))
 
 (defprotocol component-proto (component-name [_]))
 
@@ -16,4 +16,3 @@
 (defcomponent velocity [x y])
 (defcomponent aabb [w h])      ; axis aligned bounding box
 (defcomponent controllable [start-jump-time]) ; Whether the entity can be controlled
-(defcomponent id [id])
