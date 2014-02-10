@@ -10,7 +10,8 @@
                  [speclj "2.8.0"]
                  [specljs "2.8.0"]
                  [compojure "1.1.5"]
-                 [clinp "0.1.0-SNAPSHOT"]]
+                 [clinp "0.1.0-SNAPSHOT"]
+                 [vyrlynd "0.1.0-SNAPSHOT"]]
 
   ;; lein-cljsbuild plugin to build a CLJS project
   :plugins [

@@ -3,8 +3,8 @@
             [sivinolk.pixi :as pixi]
             [sivinolk.physics :as physics]
             [sivinolk.components :as comps]
-            [sivinolk.entity :as entity]
-            [sivinolk.world :as world]))
+            [vyrlynd.entity :as entity]
+            [vyrlynd.world :as world]))
 
 ;; Create a main record to define the world
 (def world-state (atom world/base-world))
