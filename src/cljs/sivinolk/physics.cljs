@@ -12,7 +12,15 @@
             0
           :default (k position))))
 
-(defn HACK-force-world-bounds [entity]
+(defn HACK-allow-world-rejump
+  [entity world-bound]
+  (if (> (:y (:position entity)) (:y world-bound))
+    (entity/add-component
+     entity
+     (merge (:controllable entity) {:jump-flag true}))
+    entity))
+
+(defn HACK-force-world-bounds [entity world-bound]
   (let [position (:position entity)]
       ; reset position to world bound
       ; TOTHINK how to handle velocity change?
@@ -20,6 +28,12 @@
        entity
        (merge position {:x (HACK-check-bound "x" position world-bound)
                         :y (HACK-check-bound "y" position world-bound)}))))
+
+(defn HACK-world-bounds
+  [entity world-bound]
+  (-> entity
+      (HACK-allow-world-rejump world-bound)
+      (HACK-force-world-bounds world-bound)))
 
 (defn move
   "Move the entity by the given x and y"
@@ -91,15 +105,31 @@
         (entity/add-component ea (merge (:position ea) {:y (- (:y (:position eb)) (:h (:aabb ea)))})))
       )))
 
+(defn hacky-extra-resolve
+  "Hacky extra resolution."
+  [ea eb]
+  (if (:controllable ea)
+    (entity/add-component ea (merge (:controllable ea) {:jump-flag true}))))
+
 (defn resolve-collisions [entity world]
   (reduce
    (fn [entity test-entity]
      (if (collision? entity test-entity)
-       (resolve-collision entity test-entity)
+       (-> entity
+         (resolve-collision test-entity)
+         (hacky-extra-resolve test-entity))
        entity))
    entity
    (vals (:entities world))
    ))
+
+(comment
+  (match [collider collidee direction]
+     [:controllable :world :above] (reset-state (:controllable collider))
+  )
+
+  "This could get out of hand very quickly. How can we quickly and easily setup the desired behaviors without making it unclear as to what is occuring and without making a giant function handle all the bits?"
+)
 
 (defn do-physics-simulation
   "Apply physics simulation to the given entity"
@@ -109,7 +139,7 @@
     (-> entity
         apply-velocity-to-entity
         (resolve-collisions world)
-        HACK-force-world-bounds))
+        (HACK-world-bounds world-bound)))
   ; TODO check for collisions
   ; TODO resolve collisions
   ; TOTHINK what to do with collision events?

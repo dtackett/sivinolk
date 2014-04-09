@@ -56,7 +56,7 @@
                                                                        (comps/rotation. 0)
                                                                        (comps/velocity. 0 3)
                                                                        (comps/aabb. 26 37)
-                                                                       (comps/controllable.)
+                                                                       (comps/controllable. 0 true)
                                                                        (comps/position. 100 100)])))))
 
     (swap! target-entity #(select-next-controllable @world-state 0))
@@ -73,7 +73,7 @@
                                                    (comps/rotation. 0)
                                                    (comps/velocity. 0 3)
                                                    (comps/aabb. 26 37)
-                                                   (comps/controllable.)
+                                                   (comps/controllable. 0 true)
                                                    (comps/position. 100 100)])))))
 
 
@@ -108,9 +108,10 @@
                              (world/update-entity world
                                                   (let [entity (world/get-entity world @target-entity)
                                                         controllable (:controllable entity)]
-                                                    (entity/add-component
-                                                     entity
-                                                     (merge controllable {:start-jump-time (.now js/Date)})))))))
+                                                    (if (:jump-flag controllable)
+                                                      (entity/add-component
+                                                       entity
+                                                       (merge controllable {:start-jump-time (.now js/Date) :jump-flag false}))))))))
 
     (clinp/listen! :UP :up
                    #(swap! world-state
