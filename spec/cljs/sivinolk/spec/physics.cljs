@@ -4,7 +4,7 @@
               [vyrlynd.components :as core-comps]
               [sivinolk.components :as comps]
               [sivinolk.physics :as physics])
-    (:require-macros [specljs.core :refer [describe it should should-not should-be-nil should==]]))
+    (:require-macros [specljs.core :refer [describe it should should-not should-be-nil should=]]))
 
 ;; TODO These tests work on idividual entities
 ;; there are no tests which operate on the system as a whole (and there should be)
@@ -18,7 +18,7 @@
 
 (describe "Getting current bounds"
           (it "Get bounds for an entity with a position and an aabb"
-              (should== {:l 10 :t 10 :r 20 :b 20}
+              (should= {:l 10 :t 10 :r 20 :b 20}
                        (physics/get-bounds (create-entity 10 10 10 10))))
 
           (it "Get bounds for an entity with just a position"
@@ -33,7 +33,7 @@
 
 (describe "Getting the midpoint"
           (it "Get midpoint for an entity with a position "
-              (should== {:x 7.5 :y 7.5}
+              (should= {:x 7.5 :y 7.5}
                         (physics/get-midpoint (create-entity 5 5 5 5))))
 
           (it "Get midpoint for an entity with just a position"
@@ -79,7 +79,7 @@
 
 (describe "Collision resolution"
           (it "Collision from the top"
-              (should==
+              (should=
                {:x 0 :y 5}
                (:position
                 (physics/resolve-collision
@@ -87,7 +87,7 @@
                  (create-entity 0 15 10 10)))))
 
           (it "Collision from the bottom"
-              (should==
+              (should=
                {:x 0 :y 25}
                (:position
                 (physics/resolve-collision
@@ -95,7 +95,7 @@
                  (create-entity 0 15 10 10)))))
 
           (it "Collision from the left"
-              (should==
+              (should=
                {:x 5 :y 0}
                (:position
                 (physics/resolve-collision
@@ -103,7 +103,7 @@
                  (create-entity 15 0 10 10)))))
 
           (it "Collision from the right"
-              (should==
+              (should=
                {:x 25 :y 0}
                (:position
                 (physics/resolve-collision
