@@ -6,7 +6,7 @@
   :source-paths ["src/clj"]
 
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/clojurescript "0.0-2030"]
+                 [org.clojure/clojurescript "0.0-2173"]
                  [speclj "2.8.0"]
                  [specljs "2.8.0"]
                  [compojure "1.1.5"]
@@ -59,7 +59,7 @@
                        ; be run via PhantomJS.  See the bin/phantom/spec-runner.js file
                        ; for details on how it's run.
                        :dev {
-                             :source-paths ["src/cljs" "spec/cljs"]
+                             :source-paths ["src/cljs" "spec/cljs" "checkouts/clinp/src" "checkouts/vyrlynd/src"]
                              :compiler {:output-dir "resources/public/js/sivinolk"
                                         :output-to "resources/public/js/sivinolk/sivinolk_dev.js"
                                         :source-map "resources/public/js/sivinolk/sivinolk_dev.js.map"
