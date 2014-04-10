@@ -6,9 +6,8 @@
   :source-paths ["src/clj"]
 
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/clojurescript "0.0-2173"]
-                 [speclj "2.8.0"]
-                 [specljs "2.8.0"]
+                 [org.clojure/clojurescript "0.0-2202"]
+                 [speclj "3.0.2"]
                  [compojure "1.1.5"]
                  [clinp "0.1.0-SNAPSHOT"]
                  [vyrlynd "0.1.0-SNAPSHOT"]]
@@ -16,11 +15,10 @@
   ;; lein-cljsbuild plugin to build a CLJS project
   :plugins [
             ;; cljsbuild plugin
-            [lein-cljsbuild "1.0.0"]
+            [lein-cljsbuild "1.0.3"]
 
             ;; speclj
-            [speclj "2.8.0"]
-            [specljs "2.8.0"]
+            [speclj "3.0.2"]
 
             ;; ring plugin
             [lein-ring "0.8.7"]]

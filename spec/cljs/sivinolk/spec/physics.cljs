@@ -1,10 +1,10 @@
 (ns sivinolk.spec.physics
-    (:require [specljs.core :as speclj]
+    (:require [speclj.core :as speclj]
               [vyrlynd.entity :as entity]
               [vyrlynd.components :as core-comps]
               [sivinolk.components :as comps]
               [sivinolk.physics :as physics])
-    (:require-macros [specljs.core :refer [describe it should should-not should-be-nil should=]]))
+    (:require-macros [speclj.core :refer [describe it should should-not should-be-nil should=]]))
 
 ;; TODO These tests work on idividual entities
 ;; there are no tests which operate on the system as a whole (and there should be)
