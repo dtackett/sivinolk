@@ -1,5 +1,7 @@
 # sivinolk cljs
 
+This is a work in progress. Any feedback and comments would be greatly appreciated. I would not recommend anyone to use this softare for much of anything a this point.
+
 This is an experiment in using [Pixi.js](http://www.pixijs.com/) and [ClojureScript](http://clojurescript.com/) to create a Component Entity System based game.
 
 ## Prerequisites
@@ -29,4 +31,4 @@ To start a web server for the application, run:
 
 ## License
 
-Copyright © 2013 Devon Tackett
+Copyright © 2014 Devon Tackett
