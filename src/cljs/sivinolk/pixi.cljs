@@ -44,8 +44,8 @@
         sprite (:sprite (:pixi-renderer entity))]
     (set-position
      sprite
-     (+ (:x pos-comp) (:x viewport))
-     (+ (:y pos-comp) (:y viewport)))))
+     (- (:x pos-comp) (:x viewport))
+     (- (:y pos-comp) (:y viewport)))))
 
 (defn pixi-setup-entity [stage viewport entity]
   (if (:pixi-renderer entity)

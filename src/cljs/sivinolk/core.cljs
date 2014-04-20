@@ -39,22 +39,23 @@
 
 ;; This should be moved toward function purity.
 ;; Reliant on too many things outside of it.
+;; Consider the idea of entity templates
 (defn load-sample-world! []
   (do
-    (swap! world-state (fn [] (:world (world/add-entity @world-state (entity/compose-entity [(comps/viewport. 20 0)])))))
+    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity [(comps/viewport. 20 0)])))))
     ;; Add a simple world block
-    (swap! world-state (fn [] (:world (world/add-entity @world-state (entity/compose-entity
+    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
                                                                       [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
                                                                        (comps/position. 100 190)
                                                                        (comps/aabb. 16 16)])))))
 
-    (swap! world-state (fn [] (:world (world/add-entity @world-state (entity/compose-entity
+    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
                                                                       [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
                                                                        (comps/position. 116 190)
                                                                        (comps/aabb. 16 16)])))))
 
     ; Add some test bunnies
-    (swap! world-state (fn [] (:world (world/add-entity @world-state (entity/compose-entity
+    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
                                                                       [(comps/pixi-renderer. (js/PIXI.Sprite. bunny-texture))
                                                                        (comps/rotation. 0)
                                                                        (comps/velocity. 0 3)
@@ -153,9 +154,33 @@
                    #(simple-input-move! world-state @target-entity 3 0))
     ))
 
+(defn update-entity
+  "Hacky little function to merge the given map into the component on the entity"
+  [entity component-name mergemap]
+    (entity/add-component entity (merge (get entity component-name) mergemap))
+  )
+
+
+; World bounds should be pulled from the world
+; Updating an entity is extremely kludgy right now.
+(defn update-viewport [world]
+  (world/update-entity world
+                       (let
+                         [entity (world/get-entity world @target-entity)
+                          viewport (first (world/get-with-comp world :viewport))]
+                         (cond (> (- (:x (:position entity)) (:x (:viewport viewport)))300)
+                               (update-entity viewport :viewport {:x (- (:x (:position entity)) 300)})
+                               (< (- (:x (:position entity)) (:x (:viewport viewport)))100)
+                               (update-entity viewport :viewport {:x (- (:x (:position entity)) 100)})
+                               :default
+                               viewport
+                               )
+                         )))
+
 (defn update-world! [world]
   (do
     (clinp/pulse!)
+    (swap! world update-viewport)
     (swap! world (comp physics/physics-system))))
 
 (defn cycle-world [world]
