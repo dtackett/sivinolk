@@ -14,3 +14,6 @@
 (defcomponent velocity [x y])
 (defcomponent aabb [w h])      ; axis aligned bounding box
 (defcomponent controllable [start-jump-time jump-flag]) ; Whether the entity can be controlled
+
+(defcomponent viewport [x y]) ; viewport offset
+(defcomponent world-bounds [w h]) ; world component

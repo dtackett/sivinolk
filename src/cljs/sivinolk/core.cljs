@@ -37,8 +37,11 @@
 (defn update-text-display! [text]
   (.setText (-> text-entity :pixi-renderer :sprite) text))
 
+;; This should be moved toward function purity.
+;; Reliant on too many things outside of it.
 (defn load-sample-world! []
   (do
+    (swap! world-state (fn [] (:world (world/add-entity @world-state (entity/compose-entity [(comps/viewport. 20 0)])))))
     ;; Add a simple world block
     (swap! world-state (fn [] (:world (world/add-entity @world-state (entity/compose-entity
                                                                       [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
@@ -82,6 +85,20 @@
   (swap! world pixi/setup-world!))
 
 (def jump-limit 500)
+
+(defn set-viewport!
+  [x y]
+  (swap!
+   world-state
+   (fn [world]
+     (world/update-entity
+      world
+      (let [entity (first (world/get-with-comp world :viewport))]
+        (entity/add-component
+         entity
+         (merge
+          (:viewport entity)
+          {:x x :y y})))))))
 
 (defn jump-fn []
   (let [entity (world/get-entity @world-state @target-entity)
@@ -162,4 +179,5 @@
     (setup-clinp!)
     (setup-pixi! world-state)
     (js/requestAnimFrame animate)
+    (set-viewport! 100 10)
     ))

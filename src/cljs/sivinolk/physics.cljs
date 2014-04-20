@@ -2,6 +2,7 @@
   (:require [vyrlynd.entity :as entity]
             [vyrlynd.world :as world]))
 
+; This should not be defined here
 (def world-bound {:x 500 :y 250})
 
 (defn HACK-check-bound [keyname position world-bound]

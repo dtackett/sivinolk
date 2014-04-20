@@ -1,6 +1,8 @@
 ;; Pixi.js system
-(ns sivinolk.pixi)
+(ns sivinolk.pixi
+  (:require [vyrlynd.world :as world]))
 
+; Screen size should be defined elsewhere
 (defn setup-world!
   "This sets up the pixi.js renderer and stage."
   [world]
@@ -37,25 +39,29 @@
 
 (defn update-display
   "Update the pixi-renderer component with the current state"
-  [entity]
+  [entity viewport]
   (let [pos-comp (:position entity)
         sprite (:sprite (:pixi-renderer entity))]
-    (set-position sprite (:x pos-comp) (:y pos-comp))))
+    (set-position
+     sprite
+     (+ (:x pos-comp) (:x viewport))
+     (+ (:y pos-comp) (:y viewport)))))
 
-(defn pixi-setup-entity [stage entity]
+(defn pixi-setup-entity [stage viewport entity]
   (if (:pixi-renderer entity)
     (do
       (ensure-entity-on-stage! stage entity)
-      (update-display entity))))
+      (update-display entity viewport))))
 
 ; pixi render system
 (defn render-system [world]
-  (do
-    (dorun
-     (map
-      (partial pixi-setup-entity (:stage world))
-      (vals (:entities world))))
-    (. (:renderer world) render (:stage world))))
+  (let [viewport (:viewport (first (world/get-with-comp world :viewport)))]
+    (do
+      (dorun
+       (map
+        (partial pixi-setup-entity (:stage world) viewport)
+        (vals (:entities world))))
+      (. (:renderer world) render (:stage world)))))
 
 ;; This is probably unsafe anymore, should be replaced or used in conjunction with
 ;; a function that will clear up the entities in the game world as well.
