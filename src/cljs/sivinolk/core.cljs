@@ -42,7 +42,8 @@
 ;; Consider the idea of entity templates
 (defn load-sample-world! []
   (do
-    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity [(comps/viewport. 20 0)])))))
+    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity [(comps/viewport. 20 0)
+                                                                                           (comps/world-bounds. 500 250)])))))
     ;; Add a simple world block
     (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
                                                                       [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
@@ -154,11 +155,6 @@
                    #(simple-input-move! world-state @target-entity 3 0))
     ))
 
-(defn update-entity
-  "Hacky little function to merge the given map into the component on the entity"
-  [entity component-name mergemap]
-    (entity/add-component entity (merge (get entity component-name) mergemap))
-  )
 
 
 ; World bounds should be pulled from the world
@@ -169,9 +165,9 @@
                          [entity (world/get-entity world @target-entity)
                           viewport (first (world/get-with-comp world :viewport))]
                          (cond (> (- (:x (:position entity)) (:x (:viewport viewport)))300)
-                               (update-entity viewport :viewport {:x (- (:x (:position entity)) 300)})
+                               (entity/update-component viewport :viewport {:x (- (:x (:position entity)) 300)})
                                (< (- (:x (:position entity)) (:x (:viewport viewport)))100)
-                               (update-entity viewport :viewport {:x (- (:x (:position entity)) 100)})
+                               (entity/update-component viewport :viewport {:x (- (:x (:position entity)) 100)})
                                :default
                                viewport
                                )
