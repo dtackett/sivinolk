@@ -2,20 +2,16 @@
   (:require [vyrlynd.entity :as entity]
             [vyrlynd.world :as world]))
 
-; This should not be defined here
-(def world-bound {:x 500 :y 250})
-
-(defn HACK-check-bound [keyname position world-bound]
-  (let [k (keyword keyname)]
-    (cond (> (k position) (k world-bound))
-            (k world-bound)
-          (< (k position) 0)
-            0
-          :default (k position))))
+(defn HACK-check-bound [position world-bound]
+  (cond (> position world-bound)
+        world-bound
+        (< position 0)
+        0
+        :default position))
 
 (defn HACK-allow-world-rejump
   [entity world-bound]
-  (if (> (:y (:position entity)) (:y world-bound))
+  (if (> (:y (:position entity)) (:h world-bound))
     (entity/add-component
      entity
      (merge (:controllable entity) {:jump-flag true}))
@@ -27,8 +23,8 @@
       ; TOTHINK how to handle velocity change?
       (entity/add-component
        entity
-       (merge position {:x (HACK-check-bound "x" position world-bound)
-                        :y (HACK-check-bound "y" position world-bound)}))))
+       (merge position {:x (HACK-check-bound (:x position) (:w world-bound))
+                        :y (HACK-check-bound (:y position) (:h world-bound))}))))
 
 (defn HACK-world-bounds
   [entity world-bound]
@@ -40,10 +36,11 @@
   "Move the entity by the given x and y"
   [entity x y]
   (let [position (:position entity)]
-      (entity/add-component
-       entity
-       (merge position {:x (+ x (:x position))
-                        :y (+ y (:y position))}))))
+    (entity/update-component
+     entity
+     :position
+     {:x (+ x (:x position))
+      :y (+ y (:y position))})))
 
 (defn apply-velocity-to-entity
   "Apply velocity to the given entity"
@@ -134,7 +131,7 @@
 
 (defn do-physics-simulation
   "Apply physics simulation to the given entity"
-  [entity world]
+  [entity world world-bound]
   ; apply velocity
   (if (:velocity entity)
     (-> entity
@@ -148,7 +145,8 @@
 
 ; physics system
 (defn physics-system [world]
-  (reduce
-   (fn [world entity] (world/update-entity world (do-physics-simulation entity world)))
-    world
-    (vals (:entities world))))
+  (let [world-bound (:world-bounds (first (world/get-with-comp world :world-bounds)))]
+    (reduce
+     (fn [world entity] (world/update-entity world (do-physics-simulation entity world world-bound)))
+     world
+     (vals (:entities world)))))
