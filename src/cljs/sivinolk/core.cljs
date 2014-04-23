@@ -37,23 +37,31 @@
 (defn update-text-display! [text]
   (.setText (-> text-entity :pixi-renderer :sprite) text))
 
+;; It would be handy to create an entity template?
+;; Updating the entity would be simple?
+(defn add-block
+  [world x y]
+  (:world (world/add-entity world (entity/compose-entity
+                                   [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
+                                    (comps/position. x y)
+                                    (comps/aabb. 16 16)]))))
+
 ;; This should be moved toward function purity.
 ;; Reliant on too many things outside of it.
 ;; Consider the idea of entity templates
 (defn load-sample-world! []
   (do
-    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity [(comps/viewport. 20 0)
-                                                                                           (comps/world-bounds. 500 250)])))))
-    ;; Add a simple world block
-    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
-                                                                      [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
-                                                                       (comps/position. 100 190)
-                                                                       (comps/aabb. 16 16)])))))
-
-    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
-                                                                      [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
-                                                                       (comps/position. 116 190)
-                                                                       (comps/aabb. 16 16)])))))
+    (swap! world-state
+           (fn [world]
+             (:world (world/add-entity world
+                                       (entity/compose-entity [(comps/viewport. 20 0)
+                                                               (comps/world-bounds. 500 250)])))))
+    ;; Add some simple blocks
+    (swap! world-state (fn [world] (-> world
+                                       (add-block 100 190)
+                                       (add-block 116 190)
+                                       (add-block 500 190)
+                                       (add-block 500 100))))
 
     ; Add some test bunnies
     (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
