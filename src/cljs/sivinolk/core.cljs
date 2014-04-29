@@ -8,6 +8,7 @@
 
 ;; Create a main record to define the world
 (def world-state (atom world/base-world))
+(def saved-world (atom @world-state))
 
 ; Load some textures for entities
 (def bunny-texture (js/PIXI.Texture.fromImage "images/bunny.png"))
@@ -29,20 +30,20 @@
                   [(comps/pixi-renderer. (js/PIXI.Text. "Hello World"))
                    (comps/position. 10 10)]))
 
-(let [resp (world/add-entity @world-state text-entity)]
-  (do
-    (def text-entity (:entity resp))
-    (swap! world-state #(:world resp))))
+(#_(let [resp (world/add-entity @world-state text-entity)]
+     (do
+       (def text-entity (:entity resp))
+       (swap! world-state #(:world resp)))))
 
 (defn update-text-display! [text]
-  (.setText (-> text-entity :pixi-renderer :sprite) text))
+  (#_(.setText (-> text-entity :pixi-renderer :sprite) text)))
 
 ;; It would be handy to create an entity template?
 ;; Updating the entity would be simple?
 (defn add-block
   [world x y]
   (:world (world/add-entity world (entity/compose-entity
-                                   [(comps/pixi-renderer. (js/PIXI.Sprite. ugly-block-texture))
+                                   [(comps/pixi-renderer. ugly-block-texture)
                                     (comps/position. x y)
                                     (comps/aabb. 16 16)]))))
 
@@ -65,7 +66,7 @@
 
     ; Add some test bunnies
     (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
-                                                                      [(comps/pixi-renderer. (js/PIXI.Sprite. bunny-texture))
+                                                                      [(comps/pixi-renderer. bunny-texture)
                                                                        (comps/rotation. 0)
                                                                        (comps/velocity. 0 3)
                                                                        (comps/aabb. 26 37)
@@ -82,7 +83,7 @@
 
 (defn simple-add-entity! [world]
   (swap! world #(:world (world/add-entity @world (entity/compose-entity
-                                                  [(comps/pixi-renderer. (js/PIXI.Sprite. bunny-texture))
+                                                  [(comps/pixi-renderer. bunny-texture)
                                                    (comps/rotation. 0)
                                                    (comps/velocity. 0 3)
                                                    (comps/aabb. 26 37)
@@ -161,6 +162,12 @@
 
     (clinp/listen! :RIGHT :pulse
                    #(simple-input-move! world-state @target-entity 3 0))
+
+    (clinp/listen! :P :down
+                   #(swap! saved-world (fn [world] @world-state)))
+
+    (clinp/listen! :O :down
+                   #(swap! world-state (fn [world] @saved-world)))
     ))
 
 
@@ -191,7 +198,7 @@
   (do
     (let [start (.now js/Date)]
       (update-world! world)
-      (pixi/render-system @world-state)
+      (swap! world pixi/render-system)
       (update-text-display! (str (- (.now js/Date) start))))
     ))
 

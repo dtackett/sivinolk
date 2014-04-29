@@ -33,15 +33,15 @@
 (defn ensure-entity-on-stage!
   "Ensure the entity is on the given stage"
   [stage entity]
-  (let [sprite (:sprite (:pixi-renderer entity))]
-    (if (nil? (.-stage sprite))
-      (. stage addChild sprite))))
+  (let [sprite (js/PIXI.Sprite. (:texture (:pixi-renderer entity)))
+        side (. stage addChild sprite)]
+    (assoc entity :sprite sprite)))
 
 (defn update-display
   "Update the pixi-renderer component with the current state"
   [entity viewport]
   (let [pos-comp (:position entity)
-        sprite (:sprite (:pixi-renderer entity))]
+        sprite (:sprite entity)]
     (set-position
      sprite
      (- (:x pos-comp) (:x viewport))
@@ -49,19 +49,7 @@
 
 (defn pixi-setup-entity [stage viewport entity]
   (if (:pixi-renderer entity)
-    (do
-      (ensure-entity-on-stage! stage entity)
-      (update-display entity viewport))))
-
-; pixi render system
-(defn render-system [world]
-  (let [viewport (:viewport (first (world/get-with-comp world :viewport)))]
-    (do
-      (dorun
-       (map
-        (partial pixi-setup-entity (:stage world) viewport)
-        (vals (:entities world))))
-      (. (:renderer world) render (:stage world)))))
+    (update-display (ensure-entity-on-stage! stage entity) viewport)))
 
 ;; This is probably unsafe anymore, should be replaced or used in conjunction with
 ;; a function that will clear up the entities in the game world as well.
@@ -76,3 +64,17 @@
      )
    ;; do a slice 0 here to copy the array as the stage array mutates with removes
    (.slice (.-children stage) 0))))
+
+; pixi render system
+(defn render-system [world]
+  (let [viewport (:viewport (first (world/get-with-comp world :viewport)))]
+    (do
+      (empty-stage (:stage world))
+      (dorun
+       (map
+        (partial pixi-setup-entity (:stage world) viewport)
+        (vals (:entities world))))
+      (. (:renderer world) render (:stage world)))
+    world))
+
+

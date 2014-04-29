@@ -8,7 +8,7 @@
 ; physics component [vx, vy, ax, ay]
 ; render component [sprite]
 
-(defcomponent pixi-renderer [sprite])
+(defcomponent pixi-renderer [texture])
 (defcomponent position [x y])
 (defcomponent rotation [r]) ; Currently nothing pays attention to the rotation
 (defcomponent velocity [x y])
