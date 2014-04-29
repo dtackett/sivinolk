@@ -9,6 +9,7 @@ pom.xml
 .lein-failures
 .lein-plugins
 .lein-env
+.lein-repl-history
 .DS_Store
 .nrepl-port
 /repl
