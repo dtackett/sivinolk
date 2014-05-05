@@ -2,6 +2,8 @@
 (ns sivinolk.pixi
   (:require [vyrlynd.world :as world]))
 
+(def render-cache (atom {}))
+
 ; Screen size should be defined elsewhere
 (defn setup-world!
   "This sets up the pixi.js renderer and stage."
@@ -9,7 +11,10 @@
   (let [renderer (js/PIXI.autoDetectRenderer 400 300)
         stage (js/PIXI.Stage. 0x66ff99)]
     (do (.appendChild (.-body js/document) (.-view renderer))
-         (assoc (assoc world :stage stage) :renderer renderer)
+      (-> world
+          (assoc :stage stage)
+          (assoc :renderer renderer)
+          (assoc :render-cache {}))
          )))
 
 ;; I feel like set-position and set-anchor could be made easier
@@ -29,27 +34,47 @@
   (let [sprite (:sprite entity)]
     (set! (.-rotation (:sprite entity)) (+ delta (.-rotation (:sprite entity))))))
 
+; Ensure all entities in the cache still exist, if they don't remove them
+; Pump entities through and build up the cache
+; Give cache and entites to render system
+(defn cache-entity-on-stage!
+     [entity stage render-cache]
+     (let [id (:id (:id entity))]
+       (if-not
+         (contains? render-cache id)
+         (let [sprite (js/PIXI.Sprite. (:texture (:pixi-renderer entity)))]
+           (do
+             (. stage addChild sprite)
+             (assoc render-cache id sprite)))
+         render-cache)))
+
 ; Pixi system functions
 (defn ensure-entity-on-stage!
   "Ensure the entity is on the given stage"
-  [stage entity]
+  [entity stage]
   (let [sprite (js/PIXI.Sprite. (:texture (:pixi-renderer entity)))
-        side (. stage addChild sprite)]
+        side-effect (. stage addChild sprite)]
     (assoc entity :sprite sprite)))
 
 (defn update-display
   "Update the pixi-renderer component with the current state"
-  [entity viewport]
+  [entity render-cache viewport]
   (let [pos-comp (:position entity)
-        sprite (:sprite entity)]
+        sprite (get render-cache (:id (:id entity)))]
     (set-position
      sprite
      (- (:x pos-comp) (:x viewport))
-     (- (:y pos-comp) (:y viewport)))))
+     (- (:y pos-comp) (:y viewport)))
+    render-cache))
 
-(defn pixi-setup-entity [stage viewport entity]
+(defn pixi-setup-entity
+  [entity render-cache stage viewport]
   (if (:pixi-renderer entity)
-    (update-display (ensure-entity-on-stage! stage entity) viewport)))
+    (update-display
+       entity
+       (cache-entity-on-stage! entity stage render-cache)
+       viewport)
+    render-cache))
 
 ;; This is probably unsafe anymore, should be replaced or used in conjunction with
 ;; a function that will clear up the entities in the game world as well.
@@ -65,16 +90,56 @@
    ;; do a slice 0 here to copy the array as the stage array mutates with removes
    (.slice (.-children stage) 0))))
 
+(defn render-stage
+  "This gets the pixi system to return and returns the world. Intended to make dealing with this a bit more composable."
+  [world]
+  (. (:renderer world) render (:stage world))
+  world)
+
+(defn remove-from-stage
+  [render-cache stage entity-id]
+  (do
+    (if
+      (not (nil? (.-parent (get render-cache entity-id))))
+      (. stage removeChild (get render-cache entity-id)))
+    (dissoc render-cache entity-id))
+  )
+
+(defn reconsile-cache
+  "This is intended to eventually removed entities that no longer exist from the pixi stage."
+  [world]
+  (assoc
+    world
+    :render-cache
+    (reduce
+     (fn [render-cache entity-id]
+       (cond
+;        (not (contains? (:entities world) entity-id))
+        :else
+        (remove-from-stage render-cache (:stage world) entity-id)
+        :else
+        render-cache
+        ))
+     (:render-cache world)
+     (keys (:render-cache world)))))
+
+(defn setup-render-cache
+  [world]
+  (let [viewport (:viewport (first (world/get-with-comp world :viewport)))]
+    (assoc
+      world
+      :render-cache
+      (reduce
+       (fn
+         [render-cache entity]
+         (pixi-setup-entity entity render-cache (:stage world) viewport))
+       (:render-cache world)
+       (vals (:entities world))))))
+
 ; pixi render system
 (defn render-system [world]
-  (let [viewport (:viewport (first (world/get-with-comp world :viewport)))]
-    (do
-      (empty-stage (:stage world))
-      (dorun
-       (map
-        (partial pixi-setup-entity (:stage world) viewport)
-        (vals (:entities world))))
-      (. (:renderer world) render (:stage world)))
-    world))
-
+  (-> world
+      reconsile-cache
+      setup-render-cache
+      render-stage))
 

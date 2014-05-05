@@ -192,7 +192,7 @@
   (do
     (clinp/pulse!)
     (swap! world update-viewport)
-    (swap! world (comp physics/physics-system))))
+    (swap! world physics/physics-system)))
 
 (defn cycle-world [world]
   (do
