@@ -11,7 +11,7 @@
 (def saved-world (atom @world-state))
 
 ; Load some textures for entities
-(def bunny-texture (js/PIXI.Texture.fromImage "images/bunny.png"))
+(def alien-texture (js/PIXI.Texture.fromImage "images/alien.png"))
 (def ugly-block-texture (js/PIXI.Texture.fromImage "images/ugly-block.png"))
 
 ; Hack to control which entity we are moving (this really should be part of the world state?)
@@ -64,12 +64,12 @@
                                        (add-block 500 190)
                                        (add-block 500 100))))
 
-    ; Add some test bunnies
+    ; Add some test aliens
     (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
-                                                                      [(comps/pixi-renderer. bunny-texture)
+                                                                      [(comps/pixi-renderer. alien-texture)
                                                                        (comps/rotation. 0)
                                                                        (comps/velocity. 0 3)
-                                                                       (comps/aabb. 26 37)
+                                                                       (comps/aabb. 17 21)
                                                                        (comps/controllable. 0 true)
                                                                        (comps/position. 100 100)])))))
 
@@ -83,10 +83,10 @@
 
 (defn simple-add-entity! [world]
   (swap! world #(:world (world/add-entity @world (entity/compose-entity
-                                                  [(comps/pixi-renderer. bunny-texture)
+                                                  [(comps/pixi-renderer. alien-texture)
                                                    (comps/rotation. 0)
                                                    (comps/velocity. 0 3)
-                                                   (comps/aabb. 26 37)
+                                                   (comps/aabb. 17 21)
                                                    (comps/controllable. 0 true)
                                                    (comps/position. 100 100)])))))
 
