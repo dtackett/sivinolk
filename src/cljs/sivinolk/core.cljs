@@ -36,7 +36,7 @@
 (defn select-entity
   "Select the given entity"
   [world entity]
-  (swap! current-taget #((:id :id entity))))
+  (swap! target-entity #((:id (:id entity)))))
 
 (def text-entity (entity/compose-entity
                   [(comps/pixi-renderer. (js/PIXI.Text. "Hello World"))
@@ -217,53 +217,23 @@
     ; clinp setup and keyboard handlers
     (clinp/setup!)
 
-    (clinp/listen! :Z :down
-                   (fn [] (swap! target-entity #(select-next-controllable @world-state %))))
+    (clinp/listen! :Z :down #(push-input-event! :Z :down))
 
-    (clinp/listen! :X :down (fn [] (push-input-event! :X :down)))
+    (clinp/listen! :X :down #(push-input-event! :X :down))
 
-    #_(clinp/listen! :X :down
-                   #((simple-add-entity! world-state)
-                     (swap! target-entity (fn [] (dec (:next-id @world-state))))))
+    (clinp/listen! :UP :down #(push-input-event! :UP :down))
 
-    (clinp/listen! :UP :down
-                   #(swap! world-state
-                           (fn [world]
-                             (world/update-entity world
-                                                  (let [entity (world/get-entity world @target-entity)
-                                                        controllable (:controllable entity)]
-                                                    (if (:jump-flag controllable)
-                                                      (entity/add-component
-                                                       entity
-                                                       (merge controllable {:start-jump-time (.now js/Date) :jump-flag false}))))))))
+    (clinp/listen! :UP :up #(push-input-event! :UP :up))
 
-    (clinp/listen! :UP :up
-                   #(swap! world-state
-                           (fn [world]
-                             (world/update-entity world
-                                                  (let [entity (world/get-entity world @target-entity)
-                                                        controllable (:controllable entity)]
-                                                    (entity/add-component
-                                                     entity
-                                                     (merge controllable {:start-jump-time 0})))))))
+    (clinp/listen! :UP :pulse #(push-input-event! :UP :pulse))
 
-    (clinp/listen! :UP :pulse
-                   #(jump-fn))
+    (clinp/listen! :LEFT :pulse #(push-input-event! :LEFT :pulse))
 
-    ;(clinp/listen! :DOWN :pulse
-    ;               #(simple-input-move! world-state @target-entity 0 2))
+    (clinp/listen! :RIGHT :pulse #(push-input-event! :RIGHT :pulse))
 
-    (clinp/listen! :LEFT :pulse
-                   #(simple-input-move! world-state @target-entity -3 0))
+    (clinp/listen! :P :down #(push-input-event! :P :down))
 
-    (clinp/listen! :RIGHT :pulse
-                   #(simple-input-move! world-state @target-entity 3 0))
-
-    (clinp/listen! :P :down
-                   #(swap! saved-world (fn [world] @world-state)))
-
-    (clinp/listen! :O :down
-                   #(swap! world-state (fn [world] @saved-world)))
+    (clinp/listen! :O :down #(push-input-event! :O :down))
     ))
 
 
