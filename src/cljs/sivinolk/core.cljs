@@ -89,9 +89,9 @@
     ))
 
 ;; Scratch functions for playing with user input
-(defn simple-input-move! [world target-id x y]
-  (let [entity (world/get-entity @world target-id)]
-      (swap! world #(world/update-entity % (physics/move entity x y)))))
+(defn simple-input-move [world target-id x y]
+  (let [entity (world/get-entity world target-id)]
+    (world/update-entity world (physics/move entity x y))))
 
 (defn create-simple-entity
   "Quick utility function to create an alien. It would be better to have some sort of entity templating system. That might be over engineering at this point though."
@@ -103,9 +103,8 @@
                                                    (comps/controllable. 0 true)
                                                    (comps/position. 100 100)]))
 
-(defn simple-add-entity! [world]
-  (swap! world #(:world (world/add-entity @world (create-simple-entity)))))
-
+(defn simple-add-entity [world]
+  (:world (world/add-entity world (create-simple-entity))))
 
 ; Setup for the pixi.js system
 (defn setup-pixi! [world]
@@ -127,12 +126,13 @@
           (:viewport entity)
           {:x x :y y})))))))
 
-(defn jump-fn []
-  (let [entity (world/get-entity @world-state @target-entity)
+(defn jump-fn [world]
+  (let [entity (world/get-entity world @target-entity)
         now (.now js/Date)
         time-diff (- now (:start-jump-time (:controllable entity)))]
-    (cond (< time-diff jump-limit)
-      (simple-input-move! world-state @target-entity 0 -6))))
+    (cond
+     (< time-diff jump-limit) (simple-input-move world @target-entity 0 -6)
+     :else world)))
 
 ;; Hacky input event workings
 (defn push-input-event!
@@ -147,70 +147,72 @@
   []
   (swap! input-queue #(vector)))
 
-;; Hacky tests for input
-#_(
-   (push-input-event! :RIGHT :pulse)
-   (push-input-event! :UP :down)
-   (push-input-event! :UP :pulse)
-   (clear-input-queue!)
-   @input-queue)
-
 ; ([[in state] test-input & test-world])
 (defmulti process-input (fn [input & args] input))
 
 ;; Dirty implementation to run all inputs in the queue
-(defn run-input [world]
+#_(defn run-input [world]
   (doall
    (doseq [input @input-queue]
      (process-input input world))
    (clear-input-queue!)))
 
+(defn run-input [world]
+  (let [new-world
+        (reduce #(process-input %2 %1) world @input-queue)]
+    (do
+      (clear-input-queue!)
+      new-world)))
+
 #_(run-input @world-state)
 
 (defmethod process-input [:Z :down] [in world]
-  (swap! target-entity #(select-next-controllable world %)))
+  (do
+   (swap! target-entity #(select-next-controllable world %))
+   world))
 
 (defmethod process-input [:X :down] [in world]
   ; TODO add entity should be pure
-  (do
-   (simple-add-entity! world-state)
-   (swap! target-entity (fn [] (dec (:next-id world))))))
+  (let [new-world (simple-add-entity world)]
+    (do
+      (swap! target-entity (fn [] (dec (:next-id new-world))))
+      new-world)))
 
 (defmethod process-input [:UP :down] [in world]
-  (swap! world-state
-         (fn [world]
-           (world/update-entity world
-                                (let [entity (world/get-entity world @target-entity)
-                                      controllable (:controllable entity)]
-                                  (if (:jump-flag controllable)
-                                    (entity/add-component
-                                     entity
-                                     (merge controllable {:start-jump-time (.now js/Date) :jump-flag false}))))))))
+  (world/update-entity world
+                       (let [entity (world/get-entity world @target-entity)
+                                        controllable (:controllable entity)]
+                                    (if (:jump-flag controllable)
+                                      (entity/add-component
+                                       entity
+                                       (merge controllable {:start-jump-time (.now js/Date) :jump-flag false}))))))
 
 (defmethod process-input [:UP :up] [in world]
-  (swap! world-state
-         (fn [world]
-           (world/update-entity world
-                                (let [entity (world/get-entity world @target-entity)
-                                      controllable (:controllable entity)]
-                                  (entity/add-component
-                                   entity
-                                   (merge controllable {:start-jump-time 0})))))))
+  (world/update-entity world
+                       (let [entity (world/get-entity world @target-entity)
+                             controllable (:controllable entity)]
+                         (entity/add-component
+                          entity
+                          (merge controllable {:start-jump-time 0})))))
 
 (defmethod process-input [:UP :pulse] [in world]
-  (jump-fn))
+  (jump-fn world))
 
 (defmethod process-input [:LEFT :pulse] [in world]
-  (simple-input-move! world-state @target-entity -3 0))
+  (simple-input-move world @target-entity -3 0))
 
 (defmethod process-input [:RIGHT :pulse] [in world]
-  (simple-input-move! world-state @target-entity 3 0))
+  (simple-input-move world @target-entity 3 0))
 
 (defmethod process-input [:P :down] [in world]
-  (swap! saved-world (fn [world] @world-state)))
+  (do
+    (swap! saved-world (fn [world] @world-state))
+    world))
 
 (defmethod process-input [:O :down] [in world]
-  (swap! world-state (fn [world] @saved-world)))
+  (do
+    (swap! target-entity #(select-next-controllable @saved-world 0))
+    @saved-world))
 
 (defn setup-clinp! []
   (do
@@ -257,7 +259,8 @@
 (defn update-world! [world]
   (do
     (clinp/pulse!)
-    (run-input @world)
+    (swap! world run-input)
+    #_(run-input @world)
     (swap! world update-viewport)
     (swap! world physics/physics-system)))
 
