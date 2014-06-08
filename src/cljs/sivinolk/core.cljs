@@ -150,13 +150,6 @@
 ; ([[in state] test-input & test-world])
 (defmulti process-input (fn [input & args] input))
 
-;; Dirty implementation to run all inputs in the queue
-#_(defn run-input [world]
-  (doall
-   (doseq [input @input-queue]
-     (process-input input world))
-   (clear-input-queue!)))
-
 (defn run-input [world]
   (let [new-world
         (reduce #(process-input %2 %1) world @input-queue)]
