@@ -8,7 +8,7 @@
 
 ; Screen size should be defined elsewhere
 (defn setup-world!
-  "This sets up the pixi.js renderer and stage."
+  "This sets up the pixi.js renderer and stage. This will mutate the dom in place but not the world."
   [world]
   (let [renderer (js/PIXI.autoDetectRenderer 400 300)
         stage (js/PIXI.Stage. 0x66ff99)]
