@@ -6,23 +6,25 @@
             [vyrlynd.entity :as entity]
             [vyrlynd.world :as world]))
 
-;; Need to divorce world state from game state
-;; game state can keep a list of the previous world states
+(def game-state (atom {:world world/base-world
+                       :saved-world world/base-world
+                       :target-entity 0}))
 
-;; Create a main record to define the world
-(def world-state (atom world/base-world))
-(def saved-world (atom @world-state))
+;; Seems like there should be a better name for this.
+(defn map-apply [k m f]
+  (assoc m k (f (k m))))
 
+(def map-apply-world (partial map-apply :world))
+
+;; Input queue should be from an external system?
 ;; Build a queue for the inputs. This should probably be within the clinp library itself.
 (def input-queue (atom []))
 
+;; These are not ideal but they do not seem best to encapsulate into the game state
 ; Load some textures for entities
 (def alien-texture (js/PIXI.Texture.fromImage "images/alien.png"))
 (def ugly-block-texture (js/PIXI.Texture.fromImage "images/ugly-block.png"))
 
-; Hack to control which entity we are moving (this really should be part of the world state?)
-(def target-entity (atom 0))
-@target-entity
 
 (defn select-next-controllable
   "Select the next entity that has a controllable component. This is not smart enough to avoid infinite loops."
@@ -33,7 +35,7 @@
         newt
         (recur (inc newt))))))
 
-(defn select-entity
+#_(defn select-entity
   "Select the given entity"
   [world entity]
   (swap! target-entity #((:id (:id entity)))))
@@ -41,11 +43,6 @@
 (def text-entity (entity/compose-entity
                   [(comps/pixi-renderer. (js/PIXI.Text. "Hello World"))
                    (comps/position. 10 10)]))
-
-(#_(let [resp (world/add-entity @world-state text-entity)]
-     (do
-       (def text-entity (:entity resp))
-       (swap! world-state #(:world resp)))))
 
 (defn update-text-display! [text]
   (#_(.setText (-> text-entity :pixi-renderer :sprite) text)))
@@ -62,31 +59,25 @@
 ;; This should be moved toward function purity.
 ;; Reliant on too many things outside of it.
 ;; Consider the idea of entity templates
-(defn load-sample-world! []
-  (do
-    (swap! world-state
-           (fn [world]
+(defn load-sample-world [world]
+  (-> world
+           ((fn [world]
              (:world (world/add-entity world
                                        (entity/compose-entity [(comps/viewport. 20 0)
                                                                (comps/world-bounds. 500 250)])))))
-    ;; Add some simple blocks
-    (swap! world-state (fn [world] (-> world
-                                       (add-block 100 190)
-                                       (add-block 116 190)
-                                       (add-block 500 190)
-                                       (add-block 500 100))))
+           (add-block 100 190)
+           (add-block 116 190)
+           (add-block 500 190)
+           (add-block 500 100)
 
-    ; Add some test aliens
-    (swap! world-state (fn [world] (:world (world/add-entity world (entity/compose-entity
+           ; Add some test aliens
+           ((fn [world] (:world (world/add-entity world (entity/compose-entity
                                                                       [(comps/pixi-renderer. alien-texture)
                                                                        (comps/rotation. 0)
                                                                        (comps/velocity. 0 3)
                                                                        (comps/aabb. 17 21)
                                                                        (comps/controllable. 0 true)
-                                                                       (comps/position. 100 100)])))))
-
-    (swap! target-entity #(select-next-controllable @world-state 0))
-    ))
+                                                                       (comps/position. 100 100)])))))))
 
 ;; Scratch functions for playing with user input
 (defn simple-input-move [world target-id x y]
@@ -107,16 +98,14 @@
   (:world (world/add-entity world (create-simple-entity))))
 
 ; Setup for the pixi.js system
-(defn setup-pixi! [world]
-  (swap! world pixi/setup-world!))
+(defn setup-pixi! [game]
+  (swap! game #(map-apply-world % pixi/setup-world!)))
+
 
 (def jump-limit 500)
 
-(defn set-viewport!
-  [x y]
-  (swap!
-   world-state
-   (fn [world]
+(defn set-viewport
+  [x y world]
      (world/update-entity
       world
       (let [entity (first (world/get-with-comp world :viewport))]
@@ -124,15 +113,17 @@
          entity
          (merge
           (:viewport entity)
-          {:x x :y y})))))))
+          {:x x :y y})))))
 
-(defn jump-fn [world]
-  (let [entity (world/get-entity world @target-entity)
-        now (.now js/Date)
-        time-diff (- now (:start-jump-time (:controllable entity)))]
-    (cond
-     (< time-diff jump-limit) (simple-input-move world @target-entity 0 -6)
-     :else world)))
+(defn jump-fn [game]
+  (assoc game :world
+    (let [world (:world game)
+          entity (world/get-entity world (:target-entity game))
+          now (.now js/Date)
+          time-diff (- now (:start-jump-time (:controllable entity)))]
+      (cond
+       (< time-diff jump-limit) (simple-input-move world (:target-entity game) 0 -6)
+       :else world))))
 
 ;; Hacky input event workings
 (defn push-input-event!
@@ -150,62 +141,62 @@
 ; ([[in state] test-input & test-world])
 (defmulti process-input (fn [input & args] input))
 
-(defn run-input [world]
-  (let [new-world
-        (reduce #(process-input %2 %1) world @input-queue)]
+(defn run-input [game]
+  (let [new-game
+        (reduce #(process-input %2 %1) game @input-queue)]
     (do
       (clear-input-queue!)
-      new-world)))
+      new-game)))
 
 #_(run-input @world-state)
 
-(defmethod process-input [:Z :down] [in world]
-  (do
-   (swap! target-entity #(select-next-controllable world %))
-   world))
+(defmethod process-input [:Z :down] [in game]
+  (assoc game :target-entity (select-next-controllable (:world game) (:target-entity game))))
 
-(defmethod process-input [:X :down] [in world]
+(defmethod process-input [:X :down] [in game]
   ; TODO add entity should be pure
-  (let [new-world (simple-add-entity world)]
-    (do
-      (swap! target-entity (fn [] (dec (:next-id new-world))))
-      new-world)))
+  (let [new-world (simple-add-entity (:world game))]
+    (-> game
+      (assoc :target-entity (dec (:next-id new-world)))
+      (assoc :world new-world))))
 
-(defmethod process-input [:UP :down] [in world]
-  (world/update-entity world
-                       (let [entity (world/get-entity world @target-entity)
-                                        controllable (:controllable entity)]
-                                    (if (:jump-flag controllable)
-                                      (entity/add-component
-                                       entity
-                                       (merge controllable {:start-jump-time (.now js/Date) :jump-flag false}))))))
+(defmethod process-input [:UP :down] [in {world :world :as game}]
+  (assoc game :world
+    (world/update-entity world
+                         (let [entity (world/get-entity world (:target-entity game))
+                               controllable (:controllable entity)]
+                           (if (:jump-flag controllable)
+                             (entity/add-component
+                              entity
+                              (merge controllable {:start-jump-time (.now js/Date) :jump-flag false})))))))
 
-(defmethod process-input [:UP :up] [in world]
-  (world/update-entity world
-                       (let [entity (world/get-entity world @target-entity)
-                             controllable (:controllable entity)]
-                         (entity/add-component
-                          entity
-                          (merge controllable {:start-jump-time 0})))))
+(defmethod process-input [:UP :up] [in {world :world :as game}]
+  (assoc game :world
+    (world/update-entity world
+                         (let [entity (world/get-entity world (:target-entity game))
+                               controllable (:controllable entity)]
+                           (entity/add-component
+                            entity
+                            (merge controllable {:start-jump-time 0}))))))
 
-(defmethod process-input [:UP :pulse] [in world]
-  (jump-fn world))
+(defmethod process-input [:UP :pulse] [in {world :world :as game}]
+    (jump-fn game))
 
-(defmethod process-input [:LEFT :pulse] [in world]
-  (simple-input-move world @target-entity -3 0))
+(defmethod process-input [:LEFT :pulse] [in {world :world :as game}]
+  (assoc game :world
+    (simple-input-move world (:target-entity game) -3 0)))
 
-(defmethod process-input [:RIGHT :pulse] [in world]
-  (simple-input-move world @target-entity 3 0))
+(defmethod process-input [:RIGHT :pulse] [in {world :world :as game}]
+  (assoc game :world
+    (simple-input-move world (:target-entity game) 3 0)))
 
-(defmethod process-input [:P :down] [in world]
-  (do
-    (swap! saved-world (fn [world] @world-state))
-    world))
+(defmethod process-input [:P :down] [in game]
+  (assoc game :saved-world (:world game)))
 
-(defmethod process-input [:O :down] [in world]
-  (do
-    (swap! target-entity #(select-next-controllable @saved-world 0))
-    @saved-world))
+(defmethod process-input [:O :down] [in game]
+  (-> game
+    (assoc :target-entity (select-next-controllable (:world game) (:target-entity game)))
+    (assoc :world (:saved-world game))))
 
 (defn setup-clinp! []
   (do
@@ -235,48 +226,49 @@
 
 ; World bounds should be pulled from the world
 ; Updating an entity is extremely kludgy right now.
-(defn update-viewport [world]
-  (world/update-entity world
-                       (let
-                         [entity (world/get-entity world @target-entity)
-                          viewport (first (world/get-with-comp world :viewport))]
-                         (cond (> (- (:x (:position entity)) (:x (:viewport viewport)))300)
-                               (entity/update-component viewport :viewport {:x (- (:x (:position entity)) 300)})
-                               (< (- (:x (:position entity)) (:x (:viewport viewport)))100)
-                               (entity/update-component viewport :viewport {:x (- (:x (:position entity)) 100)})
-                               :default
-                               viewport
-                               )
-                         )))
+(defn update-viewport [game]
+  (let [world (:world game)]
+    (assoc game :world
+      (world/update-entity world
+                           (let
+                             [entity (world/get-entity world (:target-entity game))
+                              viewport (first (world/get-with-comp world :viewport))]
+                             (cond (> (- (:x (:position entity)) (:x (:viewport viewport)))300)
+                                   (entity/update-component viewport :viewport {:x (- (:x (:position entity)) 300)})
+                                   (< (- (:x (:position entity)) (:x (:viewport viewport)))100)
+                                   (entity/update-component viewport :viewport {:x (- (:x (:position entity)) 100)})
+                                   :default
+                                   viewport
+                                   )
+                             )))))
 
-(defn update-world! [world]
+(defn update-game! [game]
   (do
     (clinp/pulse!)
-    (swap! world run-input)
-    #_(run-input @world)
-    (swap! world update-viewport)
-    (swap! world physics/physics-system)))
+    (swap! game #(-> %
+                       run-input
+                       update-viewport
+                       (map-apply-world physics/physics-system)))))
 
-(defn cycle-world [world]
+;; Why is cycle game removed from update-game?
+(defn cycle-game [game]
   (do
-    (let [start (.now js/Date)]
-      (update-world! world)
-      (swap! world pixi/render-system)
-      (update-text-display! (str (- (.now js/Date) start))))
-    ))
+      (update-game! game)
+      (swap! game #(map-apply-world % pixi/render-system))))
 
 ;; setup animation loop
 (defn animate
   "Core callback loop."
   []
   (js/requestAnimFrame animate)
-  (cycle-world world-state))
+  (cycle-game game-state))
 
 (defn start []
   (do
-    (load-sample-world!)
+    (swap! game-state #(map-apply-world % load-sample-world))
+    (swap! game-state #(map-apply :target-entity % (partial select-next-controllable (:world %))))
     (setup-clinp!)
-    (setup-pixi! world-state)
+    (setup-pixi! game-state)
     (js/requestAnimFrame animate)
-    (set-viewport! 100 10)
+    (swap! game-state #(map-apply :world % (partial set-viewport 100 10)))
     ))
